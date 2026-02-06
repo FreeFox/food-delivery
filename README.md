@@ -1,5 +1,100 @@
 # Single Restaurant Food Delivery Platform
 
+A minimal food delivery application displaying a restaurant homepage with categories and featured products.
+
+## Tech Stack
+
+- **Frontend**: React 18 + Chakra UI
+- **Backend**: Node.js + Express
+- **Containerization**: Docker + Docker Compose
+
+## Project Structure
+
+```
+.
+├── backend/           # Node.js API server
+│   ├── server.js
+│   ├── package.json
+│   └── Dockerfile
+├── frontend/          # React application
+│   ├── public/
+│   ├── src/
+│   ├── package.json
+│   └── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Running the Application
+
+1. Clone the repository (already done)
+
+2. Start the application:
+```bash
+docker-compose up --build
+```
+
+3. Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+The backend API will be available at `http://localhost:5000`
+
+### API Endpoints
+
+Current API version: **v1**
+
+- `GET /api/v1/health` - Health check
+- `GET /api/v1/restaurant` - Restaurant information
+- `GET /api/v1/categories` - Menu categories
+- `GET /api/v1/products` - Featured products
+
+Legacy endpoints (v0) redirect to v1 for backward compatibility.
+
+## Features
+
+- ✅ Restaurant hero banner with info
+- ✅ Menu categories display
+- ✅ Featured products with ratings
+- ✅ Responsive design (mobile-friendly)
+- ✅ Add to cart buttons (UI only)
+- ✅ Star ratings for products
+
+## Development
+
+To run in development mode:
+
+```bash
+# Backend
+cd backend
+npm install
+npm run dev
+
+# Frontend (in another terminal)
+cd frontend
+npm install
+npm start
+```
+
+## Next Steps
+
+1. Add shopping cart functionality
+2. Implement user authentication
+3. Add product detail pages
+4. Integrate payment gateway
+5. Add order management
+6. Implement reviews system
+7. Add React Native mobile app
+8. Connect to MySQL database
+9. Add Redis caching
 A modern, scalable food delivery platform designed for a single restaurant with comprehensive product management, customer reviews, and order processing capabilities.
 
 ## 📋 Project Overview
