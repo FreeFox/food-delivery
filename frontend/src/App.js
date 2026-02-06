@@ -16,12 +16,15 @@ import {
   Icon,
   Flex,
   Badge,
-  useToast
+  useToast,
+  useDisclosure
 } from '@chakra-ui/react';
 import { StarIcon, TimeIcon, PhoneIcon } from '@chakra-ui/icons';
 import api from './api';
 import cartApi from './cart';
 import CartDrawer from './CartDrawer';
+import auth from './auth';
+import LoginModal from './LoginModal';
 
 function App() {
   const [restaurant, setRestaurant] = useState(null);
@@ -32,6 +35,9 @@ function App() {
   const [cartCount, setCartCount] = useState(0);
   const toast = useToast();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(auth.isAuthenticated());
+  const [user, setUser] = useState(auth.getUserInfo());
+  const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,13 +63,15 @@ function App() {
         setCategories(cats);
         setProducts(prods);
 
-        // fetch cart after products
-        try {
-          const existingCart = await cartApi.getCart();
-          setCart(existingCart);
-          setCartCount(cartApi.cartCount(existingCart));
-        } catch (e) {
-          console.warn('Unable to fetch cart:', e);
+        // Fetch cart only if user is authenticated
+        if (isAuthenticated) {
+          try {
+            const existingCart = await cartApi.getCart();
+            setCart(existingCart);
+            setCartCount(cartApi.cartCount(existingCart));
+          } catch (e) {
+            console.warn('Unable to fetch cart:', e);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -93,9 +101,29 @@ function App() {
               🍽️ Food Delivery
             </Heading>
             <HStack spacing={4}>
-              <Button colorScheme="red" size="sm" variant="outline">
-                Sign In
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Text fontSize="sm">Hi, {user?.email}</Text>
+                  <Button
+                    colorScheme="red"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      auth.logout();
+                      setIsAuthenticated(false);
+                      setUser(null);
+                      setCart(null);
+                      setCartCount(0);
+                    }}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <Button colorScheme="red" size="sm" variant="outline" onClick={onLoginOpen}>
+                  Sign In
+                </Button>
+              )}
               <Button colorScheme="red" size="sm" onClick={() => setIsCartOpen(true)}>
                 Cart ({cartCount})
               </Button>
@@ -244,6 +272,16 @@ function App() {
       cart={cart}
       setCart={setCart}
       setCartCount={setCartCount}
+    />
+    <LoginModal
+      isOpen={isLoginOpen}
+      onClose={onLoginClose}
+      onLoginSuccess={(user) => {
+        setIsAuthenticated(true);
+        setUser(user);
+        onLoginClose();
+        toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
+      }}
     />
   );
 }

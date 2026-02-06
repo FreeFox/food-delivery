@@ -1,71 +1,63 @@
 import api from './api';
+import auth from './auth';
 
-function getOrCreateCustomerId() {
-  let id = localStorage.getItem('customerId');
-  if (!id) {
-    id = 'guest_' + Math.random().toString(36).slice(2, 9);
-    localStorage.setItem('customerId', id);
+// Add token to all API requests
+api.interceptors.request.use((config) => {
+  const token = auth.getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return id;
-}
+  return config;
+});
 
 async function getCart() {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.get(`/api/v1/cart/${customerId}`);
-  return res.data; // may be null
+  const res = await api.get('/api/v1/cart');
+  return res.data;
 }
 
 async function createOrReplaceCart(payload) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.post(`/api/v1/cart/${customerId}`, payload);
+  const res = await api.post('/api/v1/cart', payload);
   return res.data;
 }
 
 async function addOrUpdateItem(product, quantity) {
-  const customerId = getOrCreateCustomerId();
   const payload = {
     productId: product.id,
     name: product.name,
     price: product.price,
     quantity
   };
-  const res = await api.put(`/api/v1/cart/${customerId}/items`, payload);
+  const res = await api.put('/api/v1/cart/items', payload);
   return res.data;
 }
 
 async function removeItem(productId) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.delete(`/api/v1/cart/${customerId}/items/${productId}`);
+  const res = await api.delete(`/api/v1/cart/items/${productId}`);
   return res.data;
 }
 
 async function applyCoupon(code, discount = 0) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.post(`/api/v1/cart/${customerId}/coupons`, { code, discount });
+  const res = await api.post('/api/v1/cart/coupons', { code, discount });
   return res.data;
 }
 
 async function removeCoupon(code) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.delete(`/api/v1/cart/${customerId}/coupons/${code}`);
+  const res = await api.delete(`/api/v1/cart/coupons/${code}`);
   return res.data;
 }
 
 async function setAddress(address) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.put(`/api/v1/cart/${customerId}/address`, address);
+  const res = await api.put('/api/v1/cart/address', address);
   return res.data;
 }
 
 async function setPaymentMethod(paymentMethod) {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.put(`/api/v1/cart/${customerId}/payment`, paymentMethod);
+  const res = await api.put('/api/v1/cart/payment', paymentMethod);
   return res.data;
 }
 
 async function clearCart() {
-  const customerId = getOrCreateCustomerId();
-  const res = await api.post(`/api/v1/cart/${customerId}/clear`);
+  const res = await api.post('/api/v1/cart/clear');
   return res.data;
 }
 
@@ -75,7 +67,6 @@ function cartCount(cart) {
 }
 
 export default {
-  getOrCreateCustomerId,
   getCart,
   createOrReplaceCart,
   addOrUpdateItem,

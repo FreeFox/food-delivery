@@ -1,12 +1,26 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    container_name: food-delivery-redis
+    networks:
+      - food-delivery-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
   backend:
     build: ./backend
     ports:
       - "5000:5000"
+    depends_on:
+      - redis
     environment:
       - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     container_name: food-delivery-api
     networks:
       - food-delivery-network
