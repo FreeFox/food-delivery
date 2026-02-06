@@ -10,7 +10,7 @@ The Single Restaurant Food Delivery Platform is built using a modern, scalable, 
 
 ### 1. Presentation Layer (Frontend)
 
-**Technologies:** Vue.js 3 / React 18+, Tailwind CSS, Axios
+**Technologies:** React 19+, Tailwind CSS, Axios
 
 **Responsibilities:**
 - Responsive web interface for customers

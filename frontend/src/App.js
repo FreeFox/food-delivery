@@ -15,16 +15,23 @@ import {
   Spinner,
   Icon,
   Flex,
-  Badge
+  Badge,
+  useToast
 } from '@chakra-ui/react';
 import { StarIcon, TimeIcon, PhoneIcon } from '@chakra-ui/icons';
 import api from './api';
+import cartApi from './cart';
+import CartDrawer from './CartDrawer';
 
 function App() {
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  const toast = useToast();
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +56,15 @@ function App() {
         setRestaurant(resData);
         setCategories(cats);
         setProducts(prods);
+
+        // fetch cart after products
+        try {
+          const existingCart = await cartApi.getCart();
+          setCart(existingCart);
+          setCartCount(cartApi.cartCount(existingCart));
+        } catch (e) {
+          console.warn('Unable to fetch cart:', e);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -80,8 +96,8 @@ function App() {
               <Button colorScheme="red" size="sm" variant="outline">
                 Sign In
               </Button>
-              <Button colorScheme="red" size="sm">
-                Cart (0)
+              <Button colorScheme="red" size="sm" onClick={() => setIsCartOpen(true)}>
+                Cart ({cartCount})
               </Button>
             </HStack>
           </HStack>
@@ -195,7 +211,22 @@ function App() {
                       <Text fontWeight="bold" fontSize="lg" color="red.500">
                         ${product.price}
                       </Text>
-                      <Button colorScheme="red" size="sm">
+                      <Button
+                        colorScheme="red"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const existingQty = (cart && cart.items && cart.items.find((i) => String(i.productId) === String(product.id))?.quantity) || 0;
+                            const updatedCart = await cartApi.addOrUpdateItem(product, Number(existingQty) + 1);
+                            setCart(updatedCart);
+                            setCartCount(cartApi.cartCount(updatedCart));
+                            toast({ title: 'Added to cart', status: 'success', duration: 1500, isClosable: true });
+                          } catch (e) {
+                            console.error('Add to cart failed', e);
+                            toast({ title: 'Unable to add to cart', status: 'error', duration: 2000, isClosable: true });
+                          }
+                        }}
+                      >
                         Add
                       </Button>
                     </Flex>
@@ -207,6 +238,13 @@ function App() {
         </Box>
       </Container>
     </Box>
+    <CartDrawer
+      isOpen={isCartOpen}
+      onClose={() => setIsCartOpen(false)}
+      cart={cart}
+      setCart={setCart}
+      setCartCount={setCartCount}
+    />
   );
 }
 
