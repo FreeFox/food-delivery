@@ -2,10 +2,10 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=root_password_12345
-      - MYSQL_DATABASE=food_delivery
-      - MYSQL_USER=app_user
-      - MYSQL_PASSWORD=app_password_12345
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -29,15 +29,15 @@ services:
       redis:
         condition: service_started
     environment:
-      - NODE_ENV=production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=app_user
-      - DB_PASSWORD=app_password_12345
-      - DB_NAME=food_delivery
+      - NODE_ENV=development
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
 
   frontend:
     build: ./frontend
