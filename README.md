@@ -91,7 +91,7 @@ A complete, production-ready food delivery application for a single restaurant w
 
 1. **Clone & navigate to project:**
 ```bash
-cd /home/freefox/src/food-delivery
+cd food-delivery
 ```
 
 2. **Start all services:**
