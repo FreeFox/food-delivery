@@ -3,25 +3,47 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # internal-only Redis - no host port exposed
     container_name: food-delivery-redis
     networks:
       - food-delivery-network
     restart: unless-stopped
     command: redis-server --appendonly yes
 
+  mysql:
+    image: mysql:8.0
+    container_name: food-delivery-mysql
+    environment:
+      - MYSQL_DATABASE=food_delivery
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=app_password_12345
+      - MYSQL_ROOT_PASSWORD=root_password_12345
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - food-delivery-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     ports:
       - "5000:5000"
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - DATABASE_URL=mysql://app_user:app_password_12345@mysql:3306/food_delivery
     container_name: food-delivery-api
     networks:
       - food-delivery-network
@@ -43,3 +65,7 @@ services:
 networks:
   food-delivery-network:
     driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
