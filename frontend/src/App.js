@@ -63,15 +63,13 @@ function App() {
         setCategories(cats);
         setProducts(prods);
 
-        // Fetch cart only if user is authenticated
-        if (isAuthenticated) {
-          try {
-            const existingCart = await cartApi.getCart();
-            setCart(existingCart);
-            setCartCount(cartApi.cartCount(existingCart));
-          } catch (e) {
-            console.warn('Unable to fetch cart:', e);
-          }
+        // Fetch cart (works for both authenticated users and guests)
+        try {
+          const existingCart = await cartApi.getCart();
+          setCart(existingCart);
+          setCartCount(cartApi.cartCount(existingCart));
+        } catch (e) {
+          console.warn('Unable to fetch cart:', e);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -92,7 +90,8 @@ function App() {
   }
 
   return (
-    <Box bg="gray.50" minH="100vh">
+    <>
+      <Box bg="gray.50" minH="100vh">
       {/* Header */}
       <Box bg="white" boxShadow="sm" py={4} mb={8}>
         <Container maxW="container.lg">
@@ -265,24 +264,25 @@ function App() {
           </SimpleGrid>
         </Box>
       </Container>
-    </Box>
-    <CartDrawer
-      isOpen={isCartOpen}
-      onClose={() => setIsCartOpen(false)}
-      cart={cart}
-      setCart={setCart}
-      setCartCount={setCartCount}
-    />
-    <LoginModal
-      isOpen={isLoginOpen}
-      onClose={onLoginClose}
-      onLoginSuccess={(user) => {
-        setIsAuthenticated(true);
-        setUser(user);
-        onLoginClose();
-        toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
-      }}
-    />
+      </Box>
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        setCart={setCart}
+        setCartCount={setCartCount}
+      />
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={onLoginClose}
+        onLoginSuccess={(user) => {
+          setIsAuthenticated(true);
+          setUser(user);
+          onLoginClose();
+          toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
+        }}
+      />
+    </>
   );
 }
 
