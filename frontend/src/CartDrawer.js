@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Drawer,
   DrawerOverlay,
@@ -9,22 +9,28 @@ import {
   Button,
   VStack,
   HStack,
-  Text,
-  IconButton,
-  Input,
-  NumberInput,
-  NumberInputField,
   Divider,
-  Box,
   useToast
 } from '@chakra-ui/react';
-import { DeleteIcon } from '@chakra-ui/icons';
 import cartApi from './cart';
+import CartItems from './components/checkout/CartItems';
+import CouponsSection from './components/checkout/CouponsSection';
+import AddressForm from './components/checkout/AddressForm';
+import PaymentSelector from './components/checkout/PaymentSelector';
+import CartSummary from './components/checkout/CartSummary';
 
 export default function CartDrawer({ isOpen, onClose, cart, setCart, setCartCount }) {
   const [couponCode, setCouponCode] = useState('');
-  const [addressInput, setAddressInput] = useState('');
-  const [paymentInput, setPaymentInput] = useState('');
+  const [addressForm, setAddressForm] = useState({
+    country: 'Ukraine',
+    city: '',
+    street: '',
+    number: '',
+    apartment: '',
+    entrance: '',
+    floor: ''
+  });
+  const [paymentMethod, setPaymentMethod] = useState('Credit card');
   const toast = useToast();
 
   const subtotal = (c) => {
@@ -75,9 +81,12 @@ export default function CartDrawer({ isOpen, onClose, cart, setCart, setCartCoun
   };
 
   const saveAddress = async () => {
+    if (!addressForm.city || !addressForm.street || !addressForm.number) {
+      toast({ title: 'Please fill City, Street, and Number', status: 'warning', duration: 2000 });
+      return;
+    }
     try {
-      const addr = { text: addressInput };
-      const updated = await cartApi.setAddress(addr);
+      const updated = await cartApi.setAddress(addressForm);
       setCart(updated);
       setCartCount(cartApi.cartCount(updated));
       toast({ title: 'Address saved', status: 'success', duration: 1500 });
@@ -89,11 +98,11 @@ export default function CartDrawer({ isOpen, onClose, cart, setCart, setCartCoun
 
   const savePayment = async () => {
     try {
-      const pm = { method: paymentInput };
+      const pm = { method: paymentMethod };
       const updated = await cartApi.setPaymentMethod(pm);
       setCart(updated);
       setCartCount(cartApi.cartCount(updated));
-      toast({ title: 'Payment saved', status: 'success', duration: 1500 });
+      toast({ title: 'Payment method saved', status: 'success', duration: 1500 });
     } catch (e) {
       console.error(e);
       toast({ title: 'Unable to save payment', status: 'error', duration: 2000 });
@@ -113,7 +122,20 @@ export default function CartDrawer({ isOpen, onClose, cart, setCart, setCartCoun
   };
 
   const checkout = async () => {
-    // For now: simulate checkout by clearing cart
+    // Validate required checkout info
+    if (!cart || !cart.items || cart.items.length === 0) {
+      toast({ title: 'Cart is empty', status: 'warning', duration: 2000 });
+      return;
+    }
+    if (!cart.address) {
+      toast({ title: 'Please set delivery address', status: 'warning', duration: 2000 });
+      return;
+    }
+    if (!cart.paymentMethod) {
+      toast({ title: 'Please select payment method', status: 'warning', duration: 2000 });
+      return;
+    }
+
     try {
       await clearAll();
       toast({ title: 'Checkout complete (demo)', status: 'success', duration: 2000 });
@@ -124,81 +146,46 @@ export default function CartDrawer({ isOpen, onClose, cart, setCart, setCartCoun
   };
 
   return (
-    <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="sm">
+    <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md">
       <DrawerOverlay />
       <DrawerContent>
         <DrawerHeader>Your Cart</DrawerHeader>
         <DrawerBody>
           <VStack align="stretch" spacing={4}>
-            {(!cart || !cart.items || cart.items.length === 0) && (
-              <Text>No items in cart.</Text>
-            )}
-            {cart && cart.items && cart.items.map((item) => (
-              <Box key={item.productId || item.id} borderWidth="1px" borderRadius="md" p={3}>
-                <HStack justify="space-between" align="start">
-                  <VStack align="start">
-                    <Text fontWeight="bold">{item.name}</Text>
-                    <Text fontSize="sm">${item.price}</Text>
-                  </VStack>
-                  <VStack>
-                    <NumberInput size="sm" maxW="100px" value={item.quantity} min={0} onChange={(v) => updateQty(item, Number(v))}>
-                      <NumberInputField />
-                    </NumberInput>
-                    <IconButton aria-label="Remove" icon={<DeleteIcon />} size="sm" onClick={() => remove(item.productId || item.id)} />
-                  </VStack>
-                </HStack>
-              </Box>
-            ))}
-
+            <CartItems items={cart?.items} onUpdateQty={updateQty} onRemove={remove} />
             <Divider />
-
-            <Box>
-              <Text fontWeight="bold">Coupons</Text>
-              {cart && cart.coupons && cart.coupons.length > 0 ? (
-                cart.coupons.map((c) => <HStack key={c.code}><Text>{c.code}</Text></HStack>)
-              ) : (
-                <Text fontSize="sm">No coupons</Text>
-              )}
-              <HStack mt={2}>
-                <Input placeholder="Coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
-                <Button size="sm" onClick={applyCoupon}>Apply</Button>
-              </HStack>
-            </Box>
-
+            <CouponsSection
+              coupons={cart?.coupons}
+              couponCode={couponCode}
+              onCouponCodeChange={setCouponCode}
+              onApplyCoupon={applyCoupon}
+            />
             <Divider />
-
-            <Box>
-              <Text fontWeight="bold">Delivery Address</Text>
-              <Text fontSize="sm">{cart && cart.address ? JSON.stringify(cart.address) : 'No address set'}</Text>
-              <HStack mt={2}>
-                <Input placeholder="Address" value={addressInput} onChange={(e) => setAddressInput(e.target.value)} />
-                <Button size="sm" onClick={saveAddress}>Save</Button>
-              </HStack>
-            </Box>
-
+            <AddressForm
+              savedAddress={cart?.address}
+              addressForm={addressForm}
+              onAddressChange={setAddressForm}
+              onSaveAddress={saveAddress}
+            />
             <Divider />
-
-            <Box>
-              <Text fontWeight="bold">Payment Method</Text>
-              <Text fontSize="sm">{cart && cart.paymentMethod ? JSON.stringify(cart.paymentMethod) : 'No payment method'}</Text>
-              <HStack mt={2}>
-                <Input placeholder="Card / Method" value={paymentInput} onChange={(e) => setPaymentInput(e.target.value)} />
-                <Button size="sm" onClick={savePayment}>Save</Button>
-              </HStack>
-            </Box>
-
+            <PaymentSelector
+              savedPayment={cart?.paymentMethod}
+              paymentMethod={paymentMethod}
+              onPaymentChange={setPaymentMethod}
+              onSavePayment={savePayment}
+            />
             <Divider />
-
-            <Box>
-              <Text fontWeight="bold">Subtotal: ${subtotal(cart).toFixed(2)}</Text>
-            </Box>
-
+            <CartSummary subtotal={subtotal(cart)} />
           </VStack>
         </DrawerBody>
         <DrawerFooter>
           <HStack spacing={3}>
-            <Button variant="outline" onClick={clearAll}>Clear</Button>
-            <Button colorScheme="green" onClick={checkout}>Checkout</Button>
+            <Button variant="outline" onClick={clearAll}>
+              Clear
+            </Button>
+            <Button colorScheme="green" onClick={checkout}>
+              Checkout
+            </Button>
           </HStack>
         </DrawerFooter>
       </DrawerContent>

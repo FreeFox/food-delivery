@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -10,7 +12,11 @@ app.use(cors());
 app.use(express.json());
 
 // ===== CONFIG =====
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
 const REDIS_HOST = process.env.REDIS_HOST || 'redis';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 
