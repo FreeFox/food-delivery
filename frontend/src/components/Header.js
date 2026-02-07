@@ -1,13 +1,16 @@
-import { Box, Container, Button, Heading, HStack, Text } from '@chakra-ui/react';
+import { Box, Container, Button, Heading, HStack, Text, Link as ChakraLink } from '@chakra-ui/react';
+import { Link as RouterLink } from 'react-router-dom';
 
 function Header({ isAuthenticated, user, onLoginOpen, onCartOpen, onLogout, cartCount }) {
   return (
     <Box bg="white" boxShadow="sm" py={4} mb={8}>
       <Container maxW="container.lg">
         <HStack justify="space-between" align="center">
-          <Heading size="lg" color="red.500">
-            🍽️ Food Delivery
-          </Heading>
+          <ChakraLink as={RouterLink} to="/" _hover={{ textDecoration: 'none' }}>
+            <Heading size="lg" color="red.500" cursor="pointer">
+              🍽️ Food Delivery
+            </Heading>
+          </ChakraLink>
           <HStack spacing={4}>
             {isAuthenticated ? (
               <>

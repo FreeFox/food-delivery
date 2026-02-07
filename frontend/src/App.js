@@ -61,10 +61,6 @@ function App() {
                 cart={cart}
                 setCart={setCart}
                 setCartCount={setCartCount}
-                isAuthenticated={isAuthenticated}
-                setIsAuthenticated={setIsAuthenticated}
-                user={user}
-                setUser={setUser}
               />
             }
           />
