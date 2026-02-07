@@ -1,56 +1,70 @@
-# API Documentation
+# REST API Documentation
 
 ## Overview
 
-RESTful API for the Single Restaurant Food Delivery Platform. All endpoints return JSON responses.
+Complete REST API for the Food Delivery Platform. All endpoints use JSON for request/response bodies.
 
-**Base URL:** `http://localhost:5000/api`
+**Base URL:** `http://localhost:5000/api/v1`
 
-**API Version:** v1
+**API Version:** v1 (Current)
+
+**Authentication:** JWT Bearer Token (7-day expiration)
+
+**Database:** MySQL 8.0
+
+**Cache:** Redis 7 (Guest IDs, Cart persistence)
 
 ## Authentication
 
-The API uses JWT (JSON Web Token) for authentication. Include the token in the `Authorization` header:
-
+### JWT Token
+Include the token in the `Authorization` header:
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
-### Public Endpoints (No Authentication Required)
-- Product listings
-- Category information
-- Reviews and ratings
-- Restaurant information
+**Token Details:**
+- Expiration: 7 days
+- Stored in: `localStorage` (browser)
+- Auto-attached via: Axios request interceptor
+- Algorithm: HS256
 
-### Protected Endpoints (Authentication Required)
-- Cart operations
-- Order management
-- User profile
-- Review submission
+### Guest Users
+- Anonymous browsing supported
+- Automatic `guestId` generated and stored in localStorage
+- 30-day cart persistence via Redis
+- Can proceed to checkout without login
 
-### Admin Endpoints (Admin Role Required)
-- Product management
-- Order fulfillment
-- Analytics
+### Public Endpoints (No Authentication)
+- `GET /restaurant` - Restaurant info
+- `GET /categories` - Menu categories
+- `GET /products` - Product listing
+- `GET /products/:id` - Product details
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /health` - API status
+
+### Protected Endpoints (Auth + Guest)
+- `/cart` - All cart operations (both authenticated & guest users)
+- `/cart/items` - Item management
+- `/cart/address` - Delivery address
+- `/cart/payment` - Payment method
+- `/cart/coupons` - Coupon codes
 
 ---
 
 ## Endpoints
 
-### 1. Authentication
+### Authentication Endpoints
 
 #### Register User
 ```
 POST /auth/register
 ```
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john@example.com",
-  "phone": "+1234567890",
+  "email": "user@example.com",
   "password": "securePassword123"
 }
 ```
@@ -58,22 +72,25 @@ POST /auth/register
 **Response (201):**
 ```json
 {
-  "id": "user_123",
-  "email": "john@example.com",
-  "token": "eyJhbGc...",
-  "expiresIn": 86400
+  "userId": "user_abc123xyz",
+  "email": "user@example.com",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-#### Login
+**Errors:**
+- `409 Conflict` - User already exists
+- `400 Bad Request` - Email or password missing
+
+#### Login User
 ```
 POST /auth/login
 ```
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "email": "john@example.com",
+  "email": "user@example.com",
   "password": "securePassword123"
 }
 ```
@@ -81,28 +98,20 @@ POST /auth/login
 **Response (200):**
 ```json
 {
-  "id": "user_123",
-  "email": "john@example.com",
-  "token": "eyJhbGc...",
-  "expiresIn": 86400
+  "userId": "user_abc123xyz",
+  "email": "user@example.com",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-#### Logout
-```
-POST /auth/logout
-```
-
-**Response (200):**
-```json
-{
-  "message": "Logged out successfully"
-}
+**Errors:**
+- `401 Unauthorized` - Invalid credentials
+- `400 Bad Request` - Email or password missing
 ```
 
 ---
 
-### 2. Products
+### Product Endpoints
 
 #### Get All Products
 ```
@@ -110,39 +119,35 @@ GET /products
 ```
 
 **Query Parameters:**
-- `category` (optional) - Filter by category ID
-- `search` (optional) - Search by product name
-- `page` (optional, default: 1) - Pagination
-- `limit` (optional, default: 20) - Items per page
-- `sort` (optional) - Sort by 'name', 'price', 'rating'
+- None (currently returns all products)
 
 **Response (200):**
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "prod_123",
-      "name": "Margherita Pizza",
-      "description": "Classic pizza with tomato and mozzarella",
-      "price": 12.99,
-      "category": "pizzas",
-      "image": "https://...",
-      "rating": 4.5,
-      "reviews": 42,
-      "available": true,
-      "preparationTime": 20
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 150
+[
+  {
+    "id": 1,
+    "name": "Margherita Pizza",
+    "description": "Classic pizza with tomato, mozzarella, and basil",
+    "price": 12.99,
+    "image": "https://example.com/pizza.jpg",
+    "rating": 4.5,
+    "reviews": 42,
+    "category_id": 1
+  },
+  {
+    "id": 2,
+    "name": "Carbonara Pasta",
+    "description": "Traditional Italian pasta with eggs and bacon",
+    "price": 14.99,
+    "image": "https://example.com/pasta.jpg",
+    "rating": 4.8,
+    "reviews": 28,
+    "category_id": 2
   }
-}
+]
 ```
 
-#### Get Product by ID
+#### Get Single Product by ID
 ```
 GET /products/:id
 ```
@@ -150,94 +155,23 @@ GET /products/:id
 **Response (200):**
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "prod_123",
-    "name": "Margherita Pizza",
-    "description": "Classic pizza with tomato and mozzarella",
-    "price": 12.99,
-    "category": "pizzas",
-    "image": "https://...",
-    "rating": 4.5,
-    "reviews": 42,
-    "available": true,
-    "preparationTime": 20,
-    "variants": [
-      {
-        "id": "var_1",
-        "name": "Size",
-        "options": ["Small", "Medium", "Large"]
-      }
-    ],
-    "addOns": [
-      {
-        "id": "addon_1",
-        "name": "Extra Cheese",
-        "price": 2.00
-      }
-    ]
-  }
-}
-```
-
-#### Create Product (Admin)
-```
-POST /admin/products
-```
-
-**Request Body:**
-```json
-{
+  "id": 1,
   "name": "Margherita Pizza",
-  "description": "Classic pizza",
+  "description": "Classic pizza with tomato, mozzarella, and basil",
   "price": 12.99,
-  "categoryId": "cat_1",
-  "image": "https://...",
-  "preparationTime": 20
+  "image": "https://example.com/pizza.jpg",
+  "rating": 4.5,
+  "reviews": 42,
+  "category_id": 1
 }
 ```
 
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "prod_123",
-    "name": "Margherita Pizza",
-    "price": 12.99
-  }
-}
-```
-
-#### Update Product (Admin)
-```
-PUT /admin/products/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Product updated successfully"
-}
-```
-
-#### Delete Product (Admin)
-```
-DELETE /admin/products/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Product deleted successfully"
-}
-```
+**Errors:**
+- `404 Not Found` - Product not found
 
 ---
 
-### 3. Categories
+### Category Endpoints
 
 #### Get All Categories
 ```
@@ -246,541 +180,249 @@ GET /categories
 
 **Response (200):**
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "cat_1",
-      "name": "Pizzas",
-      "description": "Our signature pizzas",
-      "image": "https://...",
-      "productCount": 15
-    },
-    {
-      "id": "cat_2",
-      "name": "Pasta",
-      "description": "Italian pasta dishes",
-      "image": "https://...",
-      "productCount": 12
-    }
-  ]
-}
-```
-
-#### Get Category by ID
-```
-GET /categories/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "cat_1",
+[
+  {
+    "id": 1,
     "name": "Pizzas",
-    "description": "Our signature pizzas",
-    "image": "https://...",
-    "products": [
-      {
-        "id": "prod_123",
-        "name": "Margherita Pizza",
-        "price": 12.99
-      }
-    ]
+    "icon": "🍕"
+  },
+  {
+    "id": 2,
+    "name": "Pasta",
+    "icon": "🍝"
+  },
+  {
+    "id": 3,
+    "name": "Salads",
+    "icon": "🥗"
+  },
+  {
+    "id": 4,
+    "name": "Desserts",
+    "icon": "🍰"
   }
+]
+```
+
+---
+
+### Restaurant Endpoint
+
+#### Get Restaurant Info
+```
+GET /restaurant
+```
+
+**Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Delicious Eats",
+  "cuisine": "Italian",
+  "rating": 4.7,
+  "reviews": 128,
+  "deliveryTime": "30-45 mins",
+  "image": "https://example.com/restaurant.jpg"
 }
 ```
 
 ---
 
-### 4. Reviews & Ratings
+### Cart Endpoints
 
-#### Get Product Reviews
+#### Get Cart
 ```
-GET /reviews/:productId
+GET /cart?guestId=<guestId>
 ```
+
+**Headers:**
+- `Authorization: Bearer <token>` (optional for authenticated users)
 
 **Query Parameters:**
-- `page` (optional, default: 1)
-- `limit` (optional, default: 10)
-- `sort` (optional) - 'recent', 'helpful', 'rating'
+- `guestId` - Required for guests, auto-added by Axios interceptor
 
 **Response (200):**
 ```json
 {
-  "success": true,
-  "data": [
+  "userId": "guest_abc123xyz",
+  "items": [
     {
-      "id": "rev_1",
-      "productId": "prod_123",
-      "userId": "user_123",
-      "userName": "John Doe",
-      "rating": 5,
-      "title": "Great pizza!",
-      "comment": "Best pizza I've had in town",
-      "images": ["https://..."],
-      "helpful": 25,
-      "notHelpful": 2,
-      "createdAt": "2026-02-05T10:30:00Z"
+      "productId": 1,
+      "name": "Margherita Pizza",
+      "price": 12.99,
+      "quantity": 2
     }
   ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 42
-  },
-  "averageRating": 4.5,
-  "totalReviews": 42
+  "coupons": [],
+  "address": null,
+  "paymentMethod": null,
+  "updatedAt": "2026-02-07T10:30:00Z"
 }
 ```
 
-#### Get Restaurant Ratings
+#### Add/Update Cart Item
 ```
-GET /restaurant/ratings
+PUT /cart/items
 ```
 
-**Response (200):**
+**Request:**
 ```json
 {
-  "success": true,
-  "data": {
-    "averageRating": 4.6,
-    "totalReviews": 328,
-    "distribution": {
-      "5": 200,
-      "4": 85,
-      "3": 30,
-      "2": 10,
-      "1": 3
-    }
-  }
-}
-```
-
-#### Submit Review (Authentication Required)
-```
-POST /reviews
-```
-
-**Request Body:**
-```json
-{
-  "productId": "prod_123",
-  "rating": 5,
-  "title": "Great pizza!",
-  "comment": "Best pizza I've had",
-  "images": ["base64_string_1", "base64_string_2"]
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "rev_1",
-    "message": "Review submitted successfully"
-  }
-}
-```
-
-#### Update Review (Authentication Required)
-```
-PUT /reviews/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Review updated successfully"
-}
-```
-
-#### Delete Review (Authentication Required)
-```
-DELETE /reviews/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Review deleted successfully"
-}
-```
-
----
-
-### 5. Cart
-
-#### Get Cart (Authentication Required)
-```
-GET /cart
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "cart_123",
-    "items": [
-      {
-        "id": "item_1",
-        "productId": "prod_123",
-        "productName": "Margherita Pizza",
-        "quantity": 2,
-        "price": 12.99,
-        "subtotal": 25.98,
-        "addOns": [
-          {
-            "name": "Extra Cheese",
-            "price": 2.00
-          }
-        ]
-      }
-    ],
-    "subtotal": 25.98,
-    "tax": 2.08,
-    "discount": 0,
-    "total": 28.06
-  }
-}
-```
-
-#### Add to Cart (Authentication Required)
-```
-POST /cart/items
-```
-
-**Request Body:**
-```json
-{
-  "productId": "prod_123",
+  "productId": 1,
+  "name": "Margherita Pizza",
+  "price": 12.99,
   "quantity": 2,
-  "variants": {
-    "size": "Large"
-  },
-  "addOns": [1, 2]
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "cartId": "cart_123",
-    "itemId": "item_1"
-  }
-}
-```
-
-#### Update Cart Item (Authentication Required)
-```
-PUT /cart/items/:itemId
-```
-
-**Request Body:**
-```json
-{
-  "quantity": 3
+  "guestId": "guest_abc123xyz"
 }
 ```
 
 **Response (200):**
 ```json
 {
-  "success": true,
-  "message": "Cart item updated"
-}
-```
-
-#### Remove from Cart (Authentication Required)
-```
-DELETE /cart/items/:itemId
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Item removed from cart"
-}
-```
-
----
-
-### 6. Orders
-
-#### Create Order (Authentication Required)
-```
-POST /orders
-```
-
-**Request Body:**
-```json
-{
-  "cartId": "cart_123",
-  "deliveryAddressId": "addr_1",
-  "paymentMethod": "card",
-  "specialInstructions": "Leave at door"
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "orderId": "order_123",
-    "orderNumber": "ORD-20260206-001",
-    "total": 28.06,
-    "estimatedDelivery": "2026-02-06T11:30:00Z",
-    "status": "confirmed"
-  }
-}
-```
-
-#### Get Orders (Authentication Required)
-```
-GET /orders
-```
-
-**Query Parameters:**
-- `status` (optional) - 'pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'
-- `page` (optional, default: 1)
-- `limit` (optional, default: 10)
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [
+  "userId": "guest_abc123xyz",
+  "items": [
     {
-      "id": "order_123",
-      "orderNumber": "ORD-20260206-001",
-      "items": [...],
-      "total": 28.06,
-      "status": "preparing",
-      "createdAt": "2026-02-06T10:00:00Z",
-      "estimatedDelivery": "2026-02-06T11:30:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 5
-  }
-}
-```
-
-#### Get Order Details (Authentication Required)
-```
-GET /orders/:id
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "order_123",
-    "orderNumber": "ORD-20260206-001",
-    "items": [
-      {
-        "productId": "prod_123",
-        "productName": "Margherita Pizza",
-        "quantity": 2,
-        "price": 12.99,
-        "subtotal": 25.98
-      }
-    ],
-    "subtotal": 25.98,
-    "tax": 2.08,
-    "discount": 0,
-    "total": 28.06,
-    "status": "preparing",
-    "statusHistory": [
-      {
-        "status": "confirmed",
-        "timestamp": "2026-02-06T10:00:00Z"
-      },
-      {
-        "status": "preparing",
-        "timestamp": "2026-02-06T10:05:00Z"
-      }
-    ],
-    "deliveryAddress": {...},
-    "createdAt": "2026-02-06T10:00:00Z",
-    "estimatedDelivery": "2026-02-06T11:30:00Z"
-  }
-}
-```
-
-#### Cancel Order (Authentication Required)
-```
-POST /orders/:id/cancel
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Order cancelled successfully"
-}
-```
-
----
-
-### 7. Restaurant Info
-
-#### Get Restaurant Information
-```
-GET /restaurant/info
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "name": "Pizza Palace",
-    "description": "The best pizza in town",
-    "image": "https://...",
-    "address": "123 Main St, City",
-    "phone": "+1234567890",
-    "email": "info@pizzapalace.com",
-    "website": "https://pizzapalace.com",
-    "hours": {
-      "monday": { "open": "11:00", "close": "23:00" },
-      "tuesday": { "open": "11:00", "close": "23:00" },
-      "wednesday": { "open": "11:00", "close": "23:00" },
-      "thursday": { "open": "11:00", "close": "23:00" },
-      "friday": { "open": "11:00", "close": "00:00" },
-      "saturday": { "open": "10:00", "close": "00:00" },
-      "sunday": { "open": "10:00", "close": "23:00" }
-    },
-    "isOpen": true,
-    "minimumOrder": 10.00,
-    "deliveryFee": 2.00,
-    "estimatedDeliveryTime": "30-45 minutes",
-    "cuisineTypes": ["Italian", "Pizza"],
-    "rating": 4.6,
-    "totalOrders": 1250
-  }
-}
-```
-
----
-
-### 8. Addresses
-
-#### Get User Addresses (Authentication Required)
-```
-GET /addresses
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "addr_1",
-      "label": "Home",
-      "address": "123 Main St",
-      "city": "New York",
-      "state": "NY",
-      "zipCode": "10001",
-      "country": "USA",
-      "latitude": 40.7128,
-      "longitude": -74.0060,
-      "isDefault": true
+      "productId": 1,
+      "name": "Margherita Pizza",
+      "price": 12.99,
+      "quantity": 2
     }
   ]
 }
 ```
 
-#### Add Address (Authentication Required)
+#### Remove Item from Cart
 ```
-POST /addresses
+DELETE /cart/items/:productId?guestId=<guestId>
 ```
 
-**Request Body:**
+**Response (200):**
 ```json
 {
-  "label": "Work",
-  "address": "456 Business Ave",
-  "city": "New York",
-  "state": "NY",
-  "zipCode": "10002",
-  "country": "USA",
-  "latitude": 40.7200,
-  "longitude": -74.0050
+  "userId": "guest_abc123xyz",
+  "items": []
 }
 ```
 
-**Response (201):**
+#### Apply Coupon
+```
+POST /cart/coupons
+```
+
+**Request:**
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "addr_2"
+  "code": "SAVE10",
+  "discount": 10,
+  "guestId": "guest_abc123xyz"
+}
+```
+
+**Response (200):**
+```json
+{
+  "userId": "guest_abc123xyz",
+  "coupons": [
+    {
+      "code": "SAVE10",
+      "discount": 10
+    }
+  ]
+}
+```
+
+#### Save Address
+```
+PUT /cart/address
+```
+
+**Request:**
+```json
+{
+  "country": "Ukraine",
+  "city": "Kyiv",
+  "street": "Main Street",
+  "number": "123",
+  "apartment": "4B",
+  "entrance": "A",
+  "floor": "4",
+  "guestId": "guest_abc123xyz"
+}
+```
+
+**Response (200):**
+```json
+{
+  "userId": "guest_abc123xyz",
+  "address": {
+    "country": "Ukraine",
+    "city": "Kyiv",
+    "street": "Main Street",
+    "number": "123",
+    "apartment": "4B"
   }
 }
 ```
 
-#### Update Address (Authentication Required)
+#### Save Payment Method
 ```
-PUT /addresses/:id
+PUT /cart/payment
 ```
 
-**Response (200):**
+**Request:**
 ```json
 {
-  "success": true,
-  "message": "Address updated successfully"
+  "method": "Credit card",
+  "guestId": "guest_abc123xyz"
 }
 ```
 
-#### Delete Address (Authentication Required)
+**Response (200):**
+```json
+{
+  "userId": "guest_abc123xyz",
+  "paymentMethod": {
+    "method": "Credit card"
+  }
+}
 ```
-DELETE /addresses/:id
+
+#### Clear Cart
+```
+POST /cart/clear
+```
+
+**Request:**
+```json
+{
+  "guestId": "guest_abc123xyz"
+}
 ```
 
 **Response (200):**
 ```json
 {
-  "success": true,
-  "message": "Address deleted successfully"
+  "userId": "guest_abc123xyz",
+  "items": [],
+  "coupons": [],
+  "address": null,
+  "paymentMethod": null
 }
 ```
 
 ---
 
-### 9. Admin Analytics
+### Health Check
 
-#### Get Dashboard Analytics (Admin)
+#### API Status
 ```
-GET /admin/analytics/dashboard
+GET /health
 ```
 
 **Response (200):**
 ```json
 {
-  "success": true,
-  "data": {
-    "todayOrders": 42,
-    "todayRevenue": 1248.50,
-    "totalOrders": 128,
-    "totalRevenue": 3850.00,
-    "averageOrderValue": 30.08,
-    "topProducts": [...],
-    "recentOrders": [...]
-  }
+  "status": "API is running"
 }
 ```
 
@@ -788,90 +430,73 @@ GET /admin/analytics/dashboard
 
 ## Error Responses
 
-### Common Error Codes
-
 **400 - Bad Request**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INVALID_REQUEST",
-    "message": "Invalid request parameters"
-  }
+  "error": "productId and positive numeric quantity are required"
 }
 ```
 
 **401 - Unauthorized**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Authentication token is missing or invalid"
-  }
-}
-```
-
-**403 - Forbidden**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "FORBIDDEN",
-    "message": "You don't have permission to access this resource"
-  }
+  "error": "Invalid credentials"
 }
 ```
 
 **404 - Not Found**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Resource not found"
-  }
+  "error": "Product not found"
+}
+```
+
+**409 - Conflict**
+```json
+{
+  "error": "User already exists"
 }
 ```
 
 **500 - Server Error**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "SERVER_ERROR",
-    "message": "An unexpected error occurred"
-  }
+  "error": "Failed to fetch restaurant"
 }
 ```
 
 ---
 
-## Rate Limiting
+## Response Format
 
-- 100 requests per minute for authenticated users
-- 20 requests per minute for unauthenticated users
-- Rate limit headers included in all responses:
-  - `X-RateLimit-Limit`
-  - `X-RateLimit-Remaining`
-  - `X-RateLimit-Reset`
+All endpoints return JSON responses. Arrays are returned directly (no wrapper), while single resources are also returned directly.
+
+**Status Codes:**
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized  
+- `404` - Not Found
+- `409` - Conflict
+- `500` - Server Error
 
 ---
 
-## Pagination
+## Database Tables
 
-All list endpoints support pagination with the following parameters:
-- `page` (default: 1)
-- `limit` (default: 20, max: 100)
+Data is stored in MySQL with the following tables:
+- `restaurants` - Single restaurant record
+- `categories` - Menu categories (4 default)
+- `products` - Menu items (4 default)
+- `product_ratings` - Reviews & ratings
+- `users` - User accounts (bcrypt hashed passwords)
+- `assets` - File uploads
 
-Response includes pagination metadata:
-```json
-{
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 150,
-    "pages": 8
-  }
-}
-```
+---
+
+## Caching Strategy
+
+- **Redis**: Cart & session storage (30-day TTL)
+- **Guest IDs**: Auto-generated & persisted in localStorage
+- **JWT Tokens**: 7-day expiration
+- **Database**: All persistent data in MySQL
