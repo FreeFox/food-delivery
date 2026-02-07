@@ -30,32 +30,3 @@ export class AuthController {
     }
   }
 }
-import { Body, Controller, Post, Res } from '@nestjs/common';
-import { AuthService } from './auth.service';
-
-@Controller('api/v1/auth')
-export class AuthController {
-  constructor(private auth: AuthService) {}
-
-  @Post('register')
-  async register(@Body() body: { email: string; password: string }, @Res() res) {
-    try {
-      const { user, token } = await this.auth.register(body.email, body.password);
-      res.cookie('token', token, { httpOnly: true });
-      return res.status(201).json({ success: true, data: { user, token }, error: null });
-    } catch (err) {
-      return res.status(400).json({ success: false, data: null, error: err.message });
-    }
-  }
-
-  @Post('login')
-  async login(@Body() body: { email: string; password: string }, @Res() res) {
-    try {
-      const { user, token } = await this.auth.login(body.email, body.password);
-      res.cookie('token', token, { httpOnly: true });
-      return res.json({ success: true, data: { user, token }, error: null });
-    } catch (err) {
-      return res.status(401).json({ success: false, data: null, error: err.message });
-    }
-  }
-}
