@@ -16,8 +16,10 @@ const REDIS_PORT = process.env.REDIS_PORT || 6379;
 
 // ===== REDIS CLIENT =====
 const redisClient = redis.createClient({
-  host: REDIS_HOST,
-  port: REDIS_PORT
+  socket: {
+    host: REDIS_HOST,
+    port: REDIS_PORT
+  }
 });
 
 redisClient.on('error', (err) => console.log('Redis error:', err));
@@ -95,6 +97,28 @@ function verifyToken(req, res, next) {
   }
 }
 
+// ===== IDENTIFY USER MIDDLEWARE (for both auth & guest) =====
+function identifyUser(req, res, next) {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.userId = decoded.userId;
+      req.email = decoded.email;
+      req.isAuthenticated = true;
+      return next();
+    } catch (err) {
+      console.log('Invalid token, treating as guest');
+    }
+  }
+  
+  // Fallback to guest ID from request body or generate new one
+  const guestId = req.body?.guestId || req.query?.guestId || 'guest_' + Math.random().toString(36).slice(2, 9);
+  req.userId = guestId;
+  req.isAuthenticated = false;
+  next();
+}
+
 // ===== PUBLIC ROUTES =====
 app.get('/api/v1/restaurant', (req, res) => {
   res.json(restaurantData);
@@ -164,8 +188,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
   }
 });
 
-// ===== PROTECTED CART ROUTES =====
-app.get('/api/v1/cart', verifyToken, async (req, res) => {
+// ===== CART ROUTES (works for authenticated & guest users) =====
+app.get('/api/v1/cart', identifyUser, async (req, res) => {
   try {
     const cart = await getCartFromRedis(req.userId);
     res.json(cart || createCart(req.userId));
@@ -175,7 +199,7 @@ app.get('/api/v1/cart', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart', verifyToken, async (req, res) => {
+app.post('/api/v1/cart', identifyUser, async (req, res) => {
   try {
     const payload = req.body || {};
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -192,7 +216,7 @@ app.post('/api/v1/cart', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/items', verifyToken, async (req, res) => {
+app.put('/api/v1/cart/items', identifyUser, async (req, res) => {
   try {
     const { productId, name, price, quantity } = req.body || {};
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
@@ -224,7 +248,7 @@ app.put('/api/v1/cart/items', verifyToken, async (req, res) => {
   }
 });
 
-app.delete('/api/v1/cart/items/:productId', verifyToken, async (req, res) => {
+app.delete('/api/v1/cart/items/:productId', identifyUser, async (req, res) => {
   try {
     const { productId } = req.params;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -238,7 +262,7 @@ app.delete('/api/v1/cart/items/:productId', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart/coupons', verifyToken, async (req, res) => {
+app.post('/api/v1/cart/coupons', identifyUser, async (req, res) => {
   try {
     const { code, discount } = req.body || {};
     if (!code) return res.status(400).json({ error: 'coupon code required' });
@@ -256,7 +280,7 @@ app.post('/api/v1/cart/coupons', verifyToken, async (req, res) => {
   }
 });
 
-app.delete('/api/v1/cart/coupons/:code', verifyToken, async (req, res) => {
+app.delete('/api/v1/cart/coupons/:code', identifyUser, async (req, res) => {
   try {
     const { code } = req.params;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -270,7 +294,7 @@ app.delete('/api/v1/cart/coupons/:code', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/address', verifyToken, async (req, res) => {
+app.put('/api/v1/cart/address', identifyUser, async (req, res) => {
   try {
     const address = req.body || null;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -284,7 +308,7 @@ app.put('/api/v1/cart/address', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/payment', verifyToken, async (req, res) => {
+app.put('/api/v1/cart/payment', identifyUser, async (req, res) => {
   try {
     const paymentMethod = req.body || null;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -298,7 +322,7 @@ app.put('/api/v1/cart/payment', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart/clear', verifyToken, async (req, res) => {
+app.post('/api/v1/cart/clear', identifyUser, async (req, res) => {
   try {
     const cart = createCart(req.userId);
     await saveCartToRedis(req.userId, cart);
