@@ -4,13 +4,17 @@ async function initializeDatabase() {
   const connection = await pool.getConnection();
   
   try {
+    // Create database if it doesn't exist and use it
+    await connection.query('CREATE DATABASE IF NOT EXISTS food_delivery');
+    await connection.query('USE food_delivery');
+
     // Create restaurants table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS restaurants (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        cuisine VARCHAR(100),
-        rating DECIMAL(3, 1) DEFAULT 4.5,
+        name CHAR(255) NOT NULL,
+        cuisine CHAR(100),
+        rating TINYINT UNSIGNED DEFAULT 45,
         reviews INT DEFAULT 0,
         delivery_time VARCHAR(50),
         image TEXT,
@@ -24,8 +28,8 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS categories (
         id INT AUTO_INCREMENT PRIMARY KEY,
         restaurant_id INT,
-        name VARCHAR(100) NOT NULL,
-        icon VARCHAR(50),
+        name CHAR(100) NOT NULL,
+        icon CHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
       )
@@ -37,11 +41,11 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         restaurant_id INT,
         category_id INT,
-        name VARCHAR(255) NOT NULL,
+        name CHAR(255) NOT NULL,
         description TEXT,
-        price DECIMAL(10, 2) NOT NULL,
+        price INT UNSIGNED NOT NULL,
         image TEXT,
-        rating DECIMAL(3, 1) DEFAULT 4.5,
+        rating TINYINT UNSIGNED DEFAULT 45,
         reviews INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -55,7 +59,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS product_ratings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         product_id INT NOT NULL,
-        user_id VARCHAR(255),
+        user_id CHAR(255),
         rating INT CHECK (rating >= 1 AND rating <= 5),
         comment TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -66,12 +70,12 @@ async function initializeDatabase() {
     // Create users table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS users (
-        id VARCHAR(255) PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        first_name VARCHAR(100),
-        last_name VARCHAR(100),
-        phone VARCHAR(20),
+        id CHAR(255) PRIMARY KEY,
+        email CHAR(255) UNIQUE NOT NULL,
+        password CHAR(255) NOT NULL,
+        first_name CHAR(100),
+        last_name CHAR(100),
+        phone CHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -81,11 +85,11 @@ async function initializeDatabase() {
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS assets (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255),
+        name CHAR(255),
         url TEXT NOT NULL,
-        type VARCHAR(50),
+        type CHAR(50),
         size INT,
-        uploaded_by VARCHAR(255),
+        uploaded_by CHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (uploaded_by) REFERENCES users(id)
       )
@@ -103,7 +107,7 @@ async function initializeDatabase() {
       `, [
         'Delicious Eats',
         'International',
-        4.8,
+        48,
         342,
         '30-45 mins',
         'https://placehold.co/1200x400?text=Delicious+Eats'
@@ -135,16 +139,52 @@ async function initializeDatabase() {
 
       // Insert default products
       const products = [
-        { name: 'Burger Deluxe', price: 12.99, rating: 4.7, category: 'Main Courses', image: 'https://placehold.co/300x200?text=Burger', description: 'Juicy burger with cheese, lettuce, and special sauce' },
-        { name: 'Caesar Salad', price: 8.99, rating: 4.5, category: 'Appetizers', image: 'https://placehold.co/300x200?text=Salad', description: 'Fresh romaine lettuce with croutons and parmesan' },
-        { name: 'Chocolate Cake', price: 6.99, rating: 4.9, category: 'Desserts', image: 'https://placehold.co/300x200?text=Cake', description: 'Rich chocolate cake with chocolate frosting' },
-        { name: 'Fresh Orange Juice', price: 4.99, rating: 4.6, category: 'Beverages', image: 'https://placehold.co/300x200?text=Juice', description: 'Freshly squeezed orange juice' }
+        {
+          name: 'Burger Deluxe',
+          price: 1299,
+          rating: 47,
+          category: 'Main Courses',
+          image: 'https://placehold.co/300x200?text=Burger',
+          description: 'Juicy burger with cheese, lettuce, and special sauce'
+        },
+        {
+          name: 'Caesar Salad',
+          price: 899,
+          rating: 45,
+          category: 'Appetizers',
+          image: 'https://placehold.co/300x200?text=Salad',
+          description: 'Fresh romaine lettuce with croutons and parmesan'
+        },
+        { 
+          name: 'Chocolate Cake',
+          price: 699,
+          rating: 49,
+          category: 'Desserts',
+          image: 'https://placehold.co/300x200?text=Cake',
+          description: 'Rich chocolate cake with chocolate frosting'
+        },
+        {
+          name: 'Fresh Orange Juice',
+          price: 499,
+          rating: 46,
+          category: 'Beverages',
+          image: 'https://placehold.co/300x200?text=Juice',
+          description: 'Freshly squeezed orange juice' 
+        }
       ];
 
       for (const product of products) {
         await connection.execute(
           'INSERT INTO products (restaurant_id, category_id, name, price, rating, image, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [restaurantId, categoryIds[product.category], product.name, product.price, product.rating, product.image, product.description]
+          [
+            restaurantId,
+            categoryIds[product.category],
+            product.name,
+            product.price,
+            product.rating,
+            product.image,
+            product.description
+          ]
         );
       }
 
