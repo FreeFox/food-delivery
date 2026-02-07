@@ -1,3 +1,4 @@
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   SimpleGrid,
@@ -9,7 +10,8 @@ import {
   Heading,
   HStack,
   Button,
-  Flex
+  Flex,
+  Link
 } from '@chakra-ui/react';
 import { StarIcon } from '@chakra-ui/icons';
 
@@ -26,16 +28,29 @@ function ProductsGrid({ products, cart, onAddToCart }) {
             bg="white"
             _hover={{ boxShadow: 'lg', transform: 'translateY(-4px)' }}
             transition="all 0.3s"
+            overflow="hidden"
           >
-            <Image
-              src={product.image}
-              alt={product.name}
-              h="200px"
-              objectFit="cover"
-            />
+            <Link as={RouterLink} to={`/product/${product.id}`} _hover={{ textDecoration: 'none' }}>
+              <Image
+                src={product.image}
+                alt={product.name}
+                h="200px"
+                objectFit="cover"
+                cursor="pointer"
+                _hover={{ opacity: 0.9 }}
+              />
+            </Link>
             <CardBody>
               <Stack spacing={2}>
-                <Heading size="md">{product.name}</Heading>
+                <Link
+                  as={RouterLink}
+                  to={`/product/${product.id}`}
+                  _hover={{ textDecoration: 'none' }}
+                >
+                  <Heading size="md" _hover={{ color: 'red.500' }}>
+                    {product.name}
+                  </Heading>
+                </Link>
                 <HStack>
                   <StarIcon color="orange.400" />
                   <Text fontSize="sm">{product.rating}</Text>

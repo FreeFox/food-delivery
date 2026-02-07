@@ -1,82 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Box, Container, Spinner, useToast, useDisclosure } from '@chakra-ui/react';
-import api from './api';
-import cartApi from './cart';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Box } from '@chakra-ui/react';
 import auth from './auth';
+import HomePage from './pages/HomePage';
+import ProductDetail from './pages/ProductDetail';
+import Header from './components/Header';
 import CartDrawer from './CartDrawer';
 import LoginModal from './LoginModal';
-import Header from './components/Header';
-import HeroBanner from './components/HeroBanner';
-import CategoriesGrid from './components/CategoriesGrid';
-import ProductsGrid from './components/ProductsGrid';
+import { useDisclosure, useToast } from '@chakra-ui/react';
+import cartApi from './cart';
 
 function App() {
-  const [restaurant, setRestaurant] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(null);
   const [cartCount, setCartCount] = useState(0);
-  const toast = useToast();
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(auth.isAuthenticated());
   const [user, setUser] = useState(auth.getUserInfo());
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
+  const toast = useToast();
 
   useEffect(() => {
-    const fetchData = async () => {
+    // Load cart on mount
+    const loadCart = async () => {
       try {
-        const [resRes, catRes, prodRes] = await Promise.all([
-          api.get('/api/v1/restaurant'),
-          api.get('/api/v1/categories'),
-          api.get('/api/v1/products')
-        ]);
-        // Validate responses before setting state to avoid runtime errors
-        const resData = resRes && typeof resRes.data === 'object' ? resRes.data : null;
-        const cats = Array.isArray(catRes && catRes.data) ? catRes.data : [];
-        const prods = Array.isArray(prodRes && prodRes.data) ? prodRes.data : [];
-
-        if (!Array.isArray(catRes && catRes.data)) {
-          console.warn('Expected /api/categories to return an array, got:', catRes && catRes.data);
-        }
-        if (!Array.isArray(prodRes && prodRes.data)) {
-          console.warn('Expected /api/products to return an array, got:', prodRes && prodRes.data);
-        }
-
-        setRestaurant(resData);
-        setCategories(cats);
-        setProducts(prods);
-
-        // Fetch cart (works for both authenticated users and guests)
-        try {
-          const existingCart = await cartApi.getCart();
-          setCart(existingCart);
-          setCartCount(cartApi.cartCount(existingCart));
-        } catch (e) {
-          console.warn('Unable to fetch cart:', e);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
+        const existingCart = await cartApi.getCart();
+        setCart(existingCart);
+        setCartCount(cartApi.cartCount(existingCart));
+      } catch (e) {
+        console.warn('Unable to fetch cart:', e);
       }
     };
-
-    fetchData();
+    loadCart();
   }, []);
-
-  const handleAddToCart = async (product) => {
-    try {
-      const existingQty = (cart && cart.items && cart.items.find((i) => String(i.productId) === String(product.id))?.quantity) || 0;
-      const updatedCart = await cartApi.addOrUpdateItem(product, Number(existingQty) + 1);
-      setCart(updatedCart);
-      setCartCount(cartApi.cartCount(updatedCart));
-      toast({ title: 'Added to cart', status: 'success', duration: 1500, isClosable: true });
-    } catch (e) {
-      console.error('Add to cart failed', e);
-      toast({ title: 'Unable to add to cart', status: 'error', duration: 2000, isClosable: true });
-    }
-  };
 
   const handleLogout = () => {
     auth.logout();
@@ -86,16 +41,8 @@ function App() {
     setCartCount(0);
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" h="100vh">
-        <Spinner size="xl" />
-      </Box>
-    );
-  }
-
   return (
-    <>
+    <Router>
       <Box bg="gray.50" minH="100vh">
         <Header
           isAuthenticated={isAuthenticated}
@@ -106,32 +53,52 @@ function App() {
           cartCount={cartCount}
         />
 
-        <HeroBanner restaurant={restaurant} />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                cart={cart}
+                setCart={setCart}
+                setCartCount={setCartCount}
+                isAuthenticated={isAuthenticated}
+                setIsAuthenticated={setIsAuthenticated}
+                user={user}
+                setUser={setUser}
+              />
+            }
+          />
+          <Route
+            path="/product/:productId"
+            element={
+              <ProductDetail
+                cart={cart}
+                setCart={setCart}
+                setCartCount={setCartCount}
+              />
+            }
+          />
+        </Routes>
 
-        <Container maxW="container.lg" pb={12}>
-          <CategoriesGrid categories={categories} />
-          <ProductsGrid products={products} cart={cart} onAddToCart={handleAddToCart} />
-        </Container>
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          cart={cart}
+          setCart={setCart}
+          setCartCount={setCartCount}
+        />
+        <LoginModal
+          isOpen={isLoginOpen}
+          onClose={onLoginClose}
+          onLoginSuccess={(user) => {
+            setIsAuthenticated(true);
+            setUser(user);
+            onLoginClose();
+            toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
+          }}
+        />
       </Box>
-
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        setCart={setCart}
-        setCartCount={setCartCount}
-      />
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={onLoginClose}
-        onLoginSuccess={(user) => {
-          setIsAuthenticated(true);
-          setUser(user);
-          onLoginClose();
-          toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
-        }}
-      />
-    </>
+    </Router>
   );
 }
 
