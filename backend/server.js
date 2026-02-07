@@ -5,6 +5,8 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const redis = require('redis');
+const pool = require('./db');
+const initializeDatabase = require('./initDB');
 
 const app = express();
 
@@ -32,36 +34,21 @@ redisClient.on('error', (err) => console.log('Redis error:', err));
 redisClient.on('connect', () => console.log('Connected to Redis'));
 redisClient.connect().catch(console.error);
 
-// ===== MOCK DATA =====
-const restaurantData = {
-  name: 'Delicious Eats',
-  cuisine: 'International',
-  rating: 4.8,
-  reviews: 342,
-  deliveryTime: '30-45 mins',
-  image: 'https://placehold.co/1200x400?text=Delicious+Eats'
-};
-
-const categories = [
-  { id: 1, name: 'Appetizers', icon: '🥗' },
-  { id: 2, name: 'Main Courses', icon: '🍔' },
-  { id: 3, name: 'Desserts', icon: '🍰' },
-  { id: 4, name: 'Beverages', icon: '🍹' }
-];
-
-const featuredProducts = [
-  { id: 1, name: 'Burger Deluxe', price: 12.99, rating: 4.7, category: 2, image: 'https://placehold.co/300x200?text=Burger' },
-  { id: 2, name: 'Caesar Salad', price: 8.99, rating: 4.5, category: 1, image: 'https://placehold.co/300x200?text=Salad' },
-  { id: 3, name: 'Chocolate Cake', price: 6.99, rating: 4.9, category: 3, image: 'https://placehold.co/300x200?text=Cake' },
-  { id: 4, name: 'Fresh Orange Juice', price: 4.99, rating: 4.6, category: 4, image: 'https://placehold.co/300x200?text=Juice' }
-];
-
-// In-memory users store (in production, use a proper database)
-const users = {};
+// ===== INITIALIZE DATABASE =====
+(async () => {
+  try {
+    await initializeDatabase();
+    console.log('✓ Database ready');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+})();
 
 // ===== HELPERS =====
-function findProduct(productId) {
-  return featuredProducts.find((p) => String(p.id) === String(productId));
+async function findProduct(productId) {
+  const [products] = await pool.execute('SELECT * FROM products WHERE id = ?', [productId]);
+  return products.length > 0 ? products[0] : null;
 }
 
 async function getCartFromRedis(userId) {
@@ -126,16 +113,52 @@ function identifyUser(req, res, next) {
 }
 
 // ===== PUBLIC ROUTES =====
-app.get('/api/v1/restaurant', (req, res) => {
-  res.json(restaurantData);
+app.get('/api/v1/restaurant', async (req, res) => {
+  try {
+    const [restaurants] = await pool.execute('SELECT * FROM restaurants LIMIT 1');
+    const restaurant = restaurants.length > 0 ? restaurants[0] : null;
+    res.json(restaurant);
+  } catch (error) {
+    console.error('Error fetching restaurant:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant' });
+  }
 });
 
-app.get('/api/v1/categories', (req, res) => {
-  res.json(categories);
+app.get('/api/v1/categories', async (req, res) => {
+  try {
+    const [categories] = await pool.execute(
+      'SELECT id, name, icon FROM categories ORDER BY id'
+    );
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
 });
 
-app.get('/api/v1/products', (req, res) => {
-  res.json(featuredProducts);
+app.get('/api/v1/products', async (req, res) => {
+  try {
+    const [products] = await pool.execute(
+      'SELECT id, name, description, price, image, rating, reviews, category_id FROM products ORDER BY id'
+    );
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+app.get('/api/v1/products/:id', async (req, res) => {
+  try {
+    const product = await findProduct(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
 });
 
 app.get('/api/v1/health', (req, res) => {
@@ -153,13 +176,20 @@ app.post('/api/v1/auth/register', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password required' });
     }
-    if (users[email]) {
+
+    // Check if user exists
+    const [existingUsers] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+    if (existingUsers.length > 0) {
       return res.status(409).json({ error: 'User already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = 'user_' + Math.random().toString(36).slice(2, 9);
-    users[email] = { userId, email, password: hashedPassword };
+    
+    await pool.execute(
+      'INSERT INTO users (id, email, password) VALUES (?, ?, ?)',
+      [userId, email, hashedPassword]
+    );
 
     const token = jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ userId, email, token });
@@ -176,18 +206,19 @@ app.post('/api/v1/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'email and password required' });
     }
 
-    const user = users[email];
-    if (!user) {
+    const [users] = await pool.execute('SELECT id, password FROM users WHERE email = ?', [email]);
+    if (users.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    const user = users[0];
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.userId, email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ userId: user.userId, email, token });
+    const token = jwt.sign({ userId: user.id, email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ userId: user.id, email, token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
@@ -229,7 +260,7 @@ app.put('/api/v1/cart/items', identifyUser, async (req, res) => {
       return res.status(400).json({ error: 'productId and positive numeric quantity are required' });
     }
 
-    const product = findProduct(productId);
+    const product = await findProduct(productId);
     if (!product) {
       return res.status(404).json({ error: `Product with ID ${productId} not found` });
     }

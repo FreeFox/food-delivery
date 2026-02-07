@@ -1,14 +1,22 @@
-version: '3.8'
-
 services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password_12345
+      - MYSQL_DATABASE=food_delivery
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=app_password_12345
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    container_name: food-delivery-redis
-    networks:
-      - food-delivery-network
-    restart: unless-stopped
     command: redis-server --appendonly yes
 
   backend:
@@ -16,16 +24,20 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       - NODE_ENV=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
-    container_name: food-delivery-api
-    networks:
-      - food-delivery-network
-    restart: unless-stopped
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password_12345
+      - DB_NAME=food_delivery
 
   frontend:
     build: ./frontend
@@ -35,11 +47,6 @@ services:
       - backend
     environment:
       - REACT_APP_API_URL=http://backend:5000
-    container_name: food-delivery-web
-    networks:
-      - food-delivery-network
-    restart: unless-stopped
 
-networks:
-  food-delivery-network:
-    driver: bridge
+volumes:
+  mysql_data:

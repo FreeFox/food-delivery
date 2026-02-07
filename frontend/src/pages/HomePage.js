@@ -1,31 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Box, Container, Spinner, useToast, useDisclosure } from '@chakra-ui/react';
+import { Box, Container, Spinner, useToast } from '@chakra-ui/react';
 import api from '../api';
 import cartApi from '../cart';
-import auth from '../auth';
-import Header from '../components/Header';
 import HeroBanner from '../components/HeroBanner';
 import CategoriesGrid from '../components/CategoriesGrid';
 import ProductsGrid from '../components/ProductsGrid';
-import CartDrawer from '../CartDrawer';
-import LoginModal from '../LoginModal';
 
 export default function HomePage({
   cart,
   setCart,
-  setCartCount,
-  isAuthenticated,
-  setIsAuthenticated,
-  user,
-  setUser
+  setCartCount
 }) {
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,14 +70,6 @@ export default function HomePage({
     }
   };
 
-  const handleLogout = () => {
-    auth.logout();
-    setIsAuthenticated(false);
-    setUser(null);
-    setCart(null);
-    setCartCount(0);
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" h="100vh">
@@ -98,41 +80,12 @@ export default function HomePage({
 
   return (
     <>
-      <Box bg="gray.50" minH="100vh">
-        <Header
-          isAuthenticated={isAuthenticated}
-          user={user}
-          onLoginOpen={onLoginOpen}
-          onCartOpen={() => setIsCartOpen(true)}
-          onLogout={handleLogout}
-          cartCount={cartApi.cartCount(cart)}
-        />
+      <HeroBanner restaurant={restaurant} />
 
-        <HeroBanner restaurant={restaurant} />
-
-        <Container maxW="container.lg" pb={12}>
-          <CategoriesGrid categories={categories} />
-          <ProductsGrid products={products} cart={cart} onAddToCart={handleAddToCart} />
-        </Container>
-      </Box>
-
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        setCart={setCart}
-        setCartCount={setCartCount}
-      />
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={onLoginClose}
-        onLoginSuccess={(user) => {
-          setIsAuthenticated(true);
-          setUser(user);
-          onLoginClose();
-          toast({ title: `Welcome, ${user.email}!`, status: 'success', duration: 2000 });
-        }}
-      />
+      <Container maxW="container.lg" pb={12}>
+        <CategoriesGrid categories={categories} />
+        <ProductsGrid products={products} cart={cart} onAddToCart={handleAddToCart} />
+      </Container>
     </>
   );
 }
