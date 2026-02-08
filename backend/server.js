@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const API_VERSION = 'v1';
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -113,7 +114,7 @@ function identifyUser(req, res, next) {
 }
 
 // ===== PUBLIC ROUTES =====
-app.get('/api/v1/restaurant', async (req, res) => {
+app.get(`/api/${API_VERSION}/restaurant`, async (req, res) => {
   try {
     const [restaurants] = await pool.execute('SELECT * FROM restaurants LIMIT 1');
     const restaurant = restaurants.length > 0 ? restaurants[0] : null;
@@ -124,7 +125,7 @@ app.get('/api/v1/restaurant', async (req, res) => {
   }
 });
 
-app.get('/api/v1/categories', async (req, res) => {
+app.get(`/api/${API_VERSION}/categories`, async (req, res) => {
   try {
     const [categories] = await pool.execute(
       'SELECT id, name, icon FROM categories ORDER BY id'
@@ -136,7 +137,7 @@ app.get('/api/v1/categories', async (req, res) => {
   }
 });
 
-app.get('/api/v1/products', async (req, res) => {
+app.get(`/api/${API_VERSION}/products`, async (req, res) => {
   try {
     const [products] = await pool.execute(
       'SELECT id, name, description, price, image, rating, reviews, category_id FROM products ORDER BY id'
@@ -148,7 +149,7 @@ app.get('/api/v1/products', async (req, res) => {
   }
 });
 
-app.get('/api/v1/products/:id', async (req, res) => {
+app.get(`/api/${API_VERSION}/products/:id`, async (req, res) => {
   try {
     const product = await findProduct(req.params.id);
     if (!product) {
@@ -161,16 +162,16 @@ app.get('/api/v1/products/:id', async (req, res) => {
   }
 });
 
-app.get('/api/v1/health', (req, res) => {
+app.get(`/api/${API_VERSION}/health`, (req, res) => {
   res.json({ status: 'API is running' });
 });
 
 app.get('/', (req, res) => {
-  res.send('<h1>Food Delivery API</h1><p>API is running. See <a href="/api/v1/health">/api/v1/health</a></p>');
+  res.send(`<h1>Food Delivery API</h1><p>API is running. See <a href="/api/${API_VERSION}/health">/api/${API_VERSION}/health</a></p>`);
 });
 
 // ===== AUTH ROUTES =====
-app.post('/api/v1/auth/register', async (req, res) => {
+app.post(`/api/${API_VERSION}/auth/register`, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -199,7 +200,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/v1/auth/login', async (req, res) => {
+app.post(`/api/${API_VERSION}/auth/login`, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -226,7 +227,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
 });
 
 // ===== CART ROUTES (works for authenticated & guest users) =====
-app.get('/api/v1/cart', identifyUser, async (req, res) => {
+app.get(`/api/${API_VERSION}/cart`, identifyUser, async (req, res) => {
   try {
     const cart = await getCartFromRedis(req.userId);
     res.json(cart || createCart(req.userId));
@@ -236,7 +237,7 @@ app.get('/api/v1/cart', identifyUser, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart', identifyUser, async (req, res) => {
+app.post(`/api/${API_VERSION}/cart`, identifyUser, async (req, res) => {
   try {
     const payload = req.body || {};
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -253,7 +254,7 @@ app.post('/api/v1/cart', identifyUser, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/items', identifyUser, async (req, res) => {
+app.put(`/api/${API_VERSION}/cart/items`, identifyUser, async (req, res) => {
   try {
     const { productId, name, price, quantity } = req.body || {};
     if (!productId || typeof quantity !== 'number' || quantity <= 0) {
@@ -285,7 +286,7 @@ app.put('/api/v1/cart/items', identifyUser, async (req, res) => {
   }
 });
 
-app.delete('/api/v1/cart/items/:productId', identifyUser, async (req, res) => {
+app.delete(`/api/${API_VERSION}/cart/items/:productId`, identifyUser, async (req, res) => {
   try {
     const { productId } = req.params;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -299,7 +300,7 @@ app.delete('/api/v1/cart/items/:productId', identifyUser, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart/coupons', identifyUser, async (req, res) => {
+app.post(`/api/${API_VERSION}/cart/coupons`, identifyUser, async (req, res) => {
   try {
     const { code, discount } = req.body || {};
     if (!code) return res.status(400).json({ error: 'coupon code required' });
@@ -317,7 +318,7 @@ app.post('/api/v1/cart/coupons', identifyUser, async (req, res) => {
   }
 });
 
-app.delete('/api/v1/cart/coupons/:code', identifyUser, async (req, res) => {
+app.delete(`/api/${API_VERSION}/cart/coupons/:code`, identifyUser, async (req, res) => {
   try {
     const { code } = req.params;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -331,7 +332,7 @@ app.delete('/api/v1/cart/coupons/:code', identifyUser, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/address', identifyUser, async (req, res) => {
+app.put(`/api/${API_VERSION}/cart/address`, identifyUser, async (req, res) => {
   try {
     const address = req.body || null;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -345,7 +346,7 @@ app.put('/api/v1/cart/address', identifyUser, async (req, res) => {
   }
 });
 
-app.put('/api/v1/cart/payment', identifyUser, async (req, res) => {
+app.put(`/api/${API_VERSION}/cart/payment`, identifyUser, async (req, res) => {
   try {
     const paymentMethod = req.body || null;
     let cart = await getCartFromRedis(req.userId) || createCart(req.userId);
@@ -359,7 +360,7 @@ app.put('/api/v1/cart/payment', identifyUser, async (req, res) => {
   }
 });
 
-app.post('/api/v1/cart/clear', identifyUser, async (req, res) => {
+app.post(`/api/${API_VERSION}/cart/clear`, identifyUser, async (req, res) => {
   try {
     const cart = createCart(req.userId);
     await saveCartToRedis(req.userId, cart);
