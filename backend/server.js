@@ -137,6 +137,23 @@ app.get(`/api/${API_VERSION}/categories`, async (req, res) => {
   }
 });
 
+app.get(`/api/${API_VERSION}/categories/:id`, async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+    const [categories] = await pool.execute(
+      'SELECT id, name, icon FROM categories WHERE id = ?',
+      [categoryId]
+    );
+    if (categories.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json(categories[0]);
+  } catch (error) {
+    console.error('Error fetching category:', error);
+    res.status(500).json({ error: 'Failed to fetch category' });
+  }
+});
+
 app.get(`/api/${API_VERSION}/products`, async (req, res) => {
   try {
     const [products] = await pool.execute(
