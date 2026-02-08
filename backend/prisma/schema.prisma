@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -13,10 +14,12 @@ model Restaurant {
   cuisine      String?
   rating       Float    @default(4.5)
   reviews      Int      @default(0)
-  deliveryTime String?
+  deliveryTime String?  @map("delivery_time")
   image        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("restaurants")
 }
 
 model Category {
