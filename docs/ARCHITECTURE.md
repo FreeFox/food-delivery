@@ -97,7 +97,7 @@ The Food Delivery Platform is a modern three-tier distributed application servin
 
 | Technology | Purpose | Version |
 |-----------|---------|---------|
-| Node.js | Runtime | 18+ |
+| Node.js | Runtime | 22+ |
 | Express.js | REST API framework | 4.x |
 | mysql2/promise | Database driver | 3.6.5 |
 | redis | In-memory cache client | 4.x |
