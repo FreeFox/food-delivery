@@ -20,8 +20,8 @@ if (!JWT_SECRET) {
   console.error('ERROR: JWT_SECRET environment variable is not set');
   process.exit(1);
 }
-const REDIS_HOST = process.env.REDIS_HOST || 'redis';
-const REDIS_PORT = process.env.REDIS_PORT || 6379;
+const REDIS_HOST = process.env.REDIS_HOST;
+const REDIS_PORT = process.env.REDIS_PORT;
 
 // ===== REDIS CLIENT =====
 const redisClient = redis.createClient({
