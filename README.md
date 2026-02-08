@@ -246,8 +246,8 @@ docker exec -it food-delivery-redis redis-cli
 ## 🚢 Deployment
 
 ### Docker Images
-- Frontend: `node:22-alpine` (React build)
-- Backend: `node:22-alpine` (Express)
+- Frontend: `node:22-slim` (React build)
+- Backend: `node:22-slim` (Express)
 - MySQL: `mysql:8.0`
 - Redis: `redis:7-alpine`
 
