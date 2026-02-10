@@ -13,4 +13,9 @@ export class AppController {
   health() {
     return { status: 'API is running' };
   }
+
+  @Get(`api/${API_VERSION}/test`)
+  test() {
+    return { status: 'Test route is working' };
+  }
 }
