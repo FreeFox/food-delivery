@@ -16,4 +16,9 @@ export class CategoriesController {
   async getOne(@Param('id', ParseIntPipe) id: number) {
     return this.categories.findOne(id);
   }
+
+  @Post()
+  async create(@Body() dto: CreateCategoryDto) {
+    return this.categories.create(dto);
+  }
 }

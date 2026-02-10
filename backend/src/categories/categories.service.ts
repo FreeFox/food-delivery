@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { CreateCategoryDto } from './dto/categories.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -21,5 +22,13 @@ export class CategoriesService {
       throw new NotFoundException('Category not found');
     }
     return categories[0];
+  }
+
+  async create(dto: CreateCategoryDto) {
+    const [category] = await this.db.execute(
+      'INSERT INTO categories (id, name, icon) VALUES (?, ?, ?)',
+      [dto.id, dto.name, dto.icon],
+    );
+    return {};
   }
 }
