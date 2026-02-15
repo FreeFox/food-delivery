@@ -1,5 +1,6 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Param, ParseIntPipe, Body } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
+import type { CreateCategoryDto } from './dto/create-category.dto';
 
 const API_VERSION = 'v1';
 
