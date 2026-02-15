@@ -8,8 +8,4 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build
-
-EXPOSE 5000
-
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "start:dev"]
