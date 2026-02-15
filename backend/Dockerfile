@@ -8,6 +8,6 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run start:dev
+RUN npm run start
 
 CMD ["npm", "run", "start:prod"]
