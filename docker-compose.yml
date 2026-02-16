@@ -40,6 +40,8 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_NAME=${DATABASE_NAME}
+      - LOCAL_UID=${UID:-1000}
+      - LOCAL_GID=${GID:-1000}
     volumes:
       - /app/node_modules
       - ./backend:/app
