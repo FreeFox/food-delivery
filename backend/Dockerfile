@@ -17,4 +17,4 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Start with the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-CMD ["npm", "run", "start:dev"]
+CMD ["npm", "run", "start:debug"]

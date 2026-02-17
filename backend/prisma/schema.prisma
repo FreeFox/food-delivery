@@ -20,3 +20,9 @@ model Profile {
   name          String
   description   String
 }
+
+model Category {
+  id            String  @id
+  name          String
+  icon          String
+}

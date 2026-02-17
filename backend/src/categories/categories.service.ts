@@ -1,34 +1,49 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { HttpStatus, Injectable, NotFoundException, HttpException } from '@nestjs/common';
 import type { CreateCategoryDto } from './dto/create-category.dto';
+import { Prisma } from 'src/generated/prisma/client';
+import { Category } from 'src/generated/prisma/client';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private db: DatabaseService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    const [categories] = await this.db.execute(
-      'SELECT id, name, icon FROM categories ORDER BY id',
-    );
-    return categories;
+  async findAll(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CategoryWhereUniqueInput;
+    where?: Prisma.CategoryWhereInput;
+    orderBy?: Prisma.CategoryOrderByWithRelationInput;
+  }) {
+    return await this.prisma.category.findMany({
+      skip: params.skip,
+      take: params.take,
+      cursor: params.cursor,
+      where: params.where,
+      orderBy: params.orderBy,
+    });
   }
 
-  async findOne(id: number) {
-    const [categories] = await this.db.execute(
-      'SELECT id, name, icon FROM categories WHERE id = ?',
-      [id],
-    );
-    if (categories.length === 0) {
+  async findOne(categoryWhereUniqueInput: Prisma.CategoryWhereUniqueInput) : Promise<Category | null> {
+    const category = await this.prisma.category.findUnique({
+        where: categoryWhereUniqueInput,
+    });
+    if (!category) {
       throw new NotFoundException('Category not found');
     }
-    return categories[0];
+    return category;
   }
 
-  async create(dto: CreateCategoryDto) {
-    const [category] = await this.db.execute(
-      'INSERT INTO categories (id, name, icon) VALUES (?, ?, ?)',
-      [dto.id, dto.name, dto.icon],
-    );
-    return {};
+  async create(dto: CreateCategoryDto): Promise<Category> {
+    try {
+      return await this.prisma.category.create({
+          data: {
+            ...dto,
+            icon: dto.icon || '', // Set to empty string if not provided
+          }
+      });
+    } catch (error) {
+      throw new HttpException('Failed to create category', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
