@@ -14,6 +14,8 @@ COPY . .
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+RUN npx prisma generate
+
 # Start with the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
