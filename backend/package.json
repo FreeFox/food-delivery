@@ -8,7 +8,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug 0.0.0.0:9229 --watch",
-    "start:prod": "node dist/main"
+    "start:prod": "node dist/main",
+    "dev": "nodemon --watch 'src/**/*.ts' --ext ts,js --exec 'ts-node -r tsconfig-paths/register' src/main.ts --respawn",
+    "dev:debug": "npx nodemon --inspect=0.0.0.0:9229 --watch 'src/**/*.ts' --ext ts,js --exec 'npx ts-node -r tsconfig-paths/register src/main.ts' --respawn"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.13",
@@ -40,7 +42,9 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.0",
     "@types/passport-jwt": "^4.0.1",
+    "nodemon": "^3.1.11",
     "prisma": "^6.19.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
 }

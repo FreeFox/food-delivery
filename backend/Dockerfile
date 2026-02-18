@@ -19,4 +19,6 @@ RUN npx prisma generate
 # Start with the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-CMD ["npm", "run", "start:debug"]
+RUN npm install -g nodemon
+
+CMD ["npm", "run", "dev:debug"]
