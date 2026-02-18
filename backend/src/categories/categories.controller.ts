@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, ParseIntPipe, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import type { CreateCategoryDto } from './dto/create-category.dto';
 
@@ -10,12 +10,12 @@ export class CategoriesController {
 
   @Get()
   async getAll() {
-    return this.categories.findAll();
+    return this.categories.findAll({});
   }
 
   @Get(':id')
-  async getOne(@Param('id', ParseIntPipe) id: number) {
-    return this.categories.findOne(id);
+  async getOne(@Param('id') id: string) {
+    return this.categories.findOne({ id });
   }
 
   @Post()
