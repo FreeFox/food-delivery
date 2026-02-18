@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable, NotFoundException, HttpException } from '@nestjs/common';
 import type { CreateCategoryDto } from './dto/create-category.dto';
-import { Prisma } from 'src/generated/prisma/client';
-import { Category } from 'src/generated/prisma/client';
+import { Prisma, Category } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
