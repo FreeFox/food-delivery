@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Patch, Put, Delete } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
-import type { CreateCategoryDto } from './dto/create-category.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 const API_VERSION = 'v1';
 
@@ -21,5 +22,20 @@ export class CategoriesController {
   @Post()
   async create(@Body() dto: CreateCategoryDto) {
     return this.categories.create(dto);
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+    return this.categories.update({ id }, dto);
+  }
+
+  @Put(':id')
+  async replace(@Param('id') id: string, @Body() dto: CreateCategoryDto) {
+    return this.categories.replace({ id }, dto);
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.categories.delete({ id });
   }
 }

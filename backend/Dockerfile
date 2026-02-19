@@ -21,4 +21,4 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 RUN npm install -g nodemon
 
-CMD ["npm", "run", "dev:debug"]
+CMD ["npm", "run", "start:debug"]
