@@ -1,22 +1,34 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { Prisma, Product } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(private db: DatabaseService) {}
+    constructor(private prisma: PrismaService) { }
 
-  async findAll() {
-    const [products] = await this.db.execute(
-      'SELECT id, name, description, price, image, rating, reviews, category_id FROM products ORDER BY id',
-    );
-    return products;
-  }
-
-  async findOne(id: number) {
-    const [products] = await this.db.execute('SELECT * FROM products WHERE id = ?', [id]);
-    if (products.length === 0) {
-      throw new NotFoundException('Product not found');
+    async findAll(params: {
+        skip?: number;
+        take?: number;
+        cursor?: Prisma.ProductWhereUniqueInput;
+        where?: Prisma.ProductWhereInput;
+        orderBy?: Prisma.ProductOrderByWithRelationInput;
+    }) {
+        return await this.prisma.product.findMany({
+            skip: params.skip,
+            take: params.take,
+            cursor: params.cursor,
+            where: params.where,
+            orderBy: params.orderBy,
+        });
     }
-    return products[0];
-  }
+
+    async findOne(productWhereUniqueInput: Prisma.ProductWhereUniqueInput): Promise<Product | null> {
+        const product = await this.prisma.product.findUnique({
+            where: productWhereUniqueInput,
+        });
+        if (!product) {
+            throw new NotFoundException('Product not found');
+        }
+        return product;
+    }
 }
