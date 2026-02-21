@@ -28,6 +28,10 @@ export class CategoriesService {
   async findOne(categoryWhereUniqueInput: Prisma.CategoryWhereUniqueInput) : Promise<Category | null> {
     const category = await this.prisma.category.findUnique({
         where: categoryWhereUniqueInput,
+        include: {
+          parent: true,
+          children: true,
+        }
     });
     if (!category) {
       throw new NotFoundException('Category not found');
@@ -35,12 +39,13 @@ export class CategoriesService {
     return category;
   }
 
-  async create(dto: CreateCategoryDto): Promise<Category> {
+  async create(data: CreateCategoryDto): Promise<Category> {
     try {
       return await this.prisma.category.create({
           data: {
-            ...dto,
-            icon: dto.icon || '', // Set to empty string if not provided
+            ...data,
+            icon: data.icon || '', // Set to empty string if not provided
+            parentId: data.parentId || null, // Set to null if not provided
           }
       });
     } catch (error) {
@@ -57,7 +62,11 @@ export class CategoriesService {
           }
       });
     } catch (error) {
-      throw new HttpException('Failed to update category', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('Category not found');
+      }
+
+      throw error;
     }
   }
 
@@ -68,10 +77,15 @@ export class CategoriesService {
           data: {
             ...data,
             icon: data.icon || '', // Set to empty string if not provided
+            parentId: data.parentId || null, // Set to null if not provided
           }
       });
     } catch (error) {
-      throw new HttpException('Failed to replace category', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('Category not found');
+      }
+
+      throw error;
     }
   }
 
@@ -81,7 +95,11 @@ export class CategoriesService {
           where
       });
     } catch (error) {
-      throw new HttpException('Failed to delete category', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('Category not found');
+      }
+
+      throw error;
     }
   }
 }

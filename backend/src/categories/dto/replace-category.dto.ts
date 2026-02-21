@@ -8,4 +8,8 @@ export class ReplaceCategoryDto {
   @IsString()
   @IsOptional()
   icon?: string;
+
+  @IsString()
+  @IsOptional()
+  parentId?: string;
 }

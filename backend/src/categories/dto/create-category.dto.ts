@@ -12,4 +12,8 @@ export class CreateCategoryDto {
   @IsString()
   @IsOptional()
   icon?: string;
+
+  @IsString()
+  @IsOptional()
+  parentId?: string;
 }
