@@ -3,6 +3,7 @@ import type { CreateCategoryDto } from './dto/create-category.dto';
 import { Prisma, Category } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReplaceCategoryDto } from './dto/replace-category.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -60,15 +61,11 @@ export class CategoriesService {
     }
   }
 
-  async replace(where: Prisma.CategoryWhereUniqueInput, data: CreateCategoryDto): Promise<Category> {
+  async replace(where: Prisma.CategoryWhereUniqueInput, data: ReplaceCategoryDto): Promise<Category> {
     try {
-      return await this.prisma.category.upsert({
+      return await this.prisma.category.update({
           where,
-          update: {
-            ...data,
-            icon: data.icon || '', // Set to empty string if not provided
-          },
-          create: {
+          data: {
             ...data,
             icon: data.icon || '', // Set to empty string if not provided
           }

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, Patch, Put, Delete } from '@nestjs/
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReplaceCategoryDto } from './dto/replace-category.dto';
 
 const API_VERSION = 'v1';
 
@@ -30,7 +31,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
-  async replace(@Param('id') id: string, @Body() dto: CreateCategoryDto) {
+  async replace(@Param('id') id: string, @Body() dto: ReplaceCategoryDto) {
     return this.categories.replace({ id }, dto);
   }
 
