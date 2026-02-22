@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, NotFoundException, HttpException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { CreateCategoryDto } from './dto/create-category.dto';
 import { Prisma, Category } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,7 +7,7 @@ import { ReplaceCategoryDto } from './dto/replace-category.dto';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(params: {
     skip?: number;
@@ -16,7 +16,7 @@ export class CategoriesService {
     where?: Prisma.CategoryWhereInput;
     orderBy?: Prisma.CategoryOrderByWithRelationInput;
   }) {
-    return await this.prisma.category.findMany({
+    return this.prisma.category.findMany({
       skip: params.skip,
       take: params.take,
       cursor: params.cursor,
@@ -25,13 +25,13 @@ export class CategoriesService {
     });
   }
 
-  async findOne(categoryWhereUniqueInput: Prisma.CategoryWhereUniqueInput) : Promise<Category | null> {
+  async findOne(categoryWhereUniqueInput: Prisma.CategoryWhereUniqueInput): Promise<Category> {
     const category = await this.prisma.category.findUnique({
-        where: categoryWhereUniqueInput,
-        include: {
-          parent: true,
-          children: true,
-        }
+      where: categoryWhereUniqueInput,
+      include: {
+        parent: true,
+        children: true,
+      }
     });
     if (!category) {
       throw new NotFoundException('Category not found');
@@ -40,65 +40,152 @@ export class CategoriesService {
   }
 
   async create(data: CreateCategoryDto): Promise<Category> {
-    try {
-      return await this.prisma.category.create({
+    return this.prisma.$transaction(async (tx) => {
+      if (data.parentId) {
+        if (data.parentId === data.id) {
+          throw new BadRequestException('Category cannot be parent of itself');
+        }
+
+        await this.parentCategoryExists(tx, data.parentId);
+        await this.validateNoCycle(tx, data.id, data.parentId);
+      }
+
+      try {
+        return await tx.category.create({
           data: {
-            ...data,
-            icon: data.icon || '', // Set to empty string if not provided
-            parentId: data.parentId || null, // Set to null if not provided
+            id: data.id,
+            name: data.name,
+            icon: data.icon ?? '',
+            parent: data.parentId
+              ? { connect: { id: data.parentId } }
+              : undefined,
           }
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new BadRequestException('Category with this id already exists');
+        }
+        throw error;
+      }
+    });
+  }
+
+  async update(id: string, data: UpdateCategoryDto): Promise<Category> {
+    return this.prisma.$transaction(async (tx) => {
+      if (data.parentId) {
+        if (data.parentId === id) {
+          throw new BadRequestException('Category cannot be parent of itself');
+        }
+        await this.parentCategoryExists(tx, data.parentId);
+        await this.validateNoCycle(tx, id, data.parentId);
+      }
+
+      const updateData: Prisma.CategoryUpdateInput = {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.icon !== undefined && { icon: data.icon }),
+        ...(data.parentId !== undefined && {
+          parent: data.parentId
+            ? { connect: { id: data.parentId } }
+            : { disconnect: true },
+        }),
+      };
+
+      return this.updateInternal(tx, { id }, updateData);
+    });
+  }
+
+  async replace(id: string, data: ReplaceCategoryDto): Promise<Category> {
+    return this.prisma.$transaction(async (tx) => {
+      if (data.parentId) {
+        if (data.parentId === id) {
+          throw new BadRequestException('Category cannot be parent of itself');
+        }
+        await this.parentCategoryExists(tx, data.parentId);
+        await this.validateNoCycle(tx, id, data.parentId);
+      }
+
+      return this.updateInternal(tx, { id }, {
+        name: data.name,
+        icon: data.icon ?? '', // Set to empty string if not provided
+        parent: data.parentId
+          ? { connect: { id: data.parentId } }
+          : { disconnect: true }
       });
-    } catch (error) {
-      throw new HttpException('Failed to create category', HttpStatus.INTERNAL_SERVER_ERROR);
+    });
+  }
+
+  async delete(id: string): Promise<Category> {
+    return this.prisma.$transaction(async (tx) => {
+      const childrenCount = await tx.category.count({
+        where: { parentId: id }
+      });
+
+      if (childrenCount > 0) {
+        throw new BadRequestException('Cannot delete category with children');
+      }
+
+      try {
+        return await tx.category.delete({
+          where: { id }
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+          throw new NotFoundException(`Category with id ${id} not found`);
+        }
+
+        throw error;
+      }
+    });
+  }
+
+  private async parentCategoryExists(tx: Prisma.TransactionClient, parentId: string) {
+    const parentCategory = await tx.category.findUnique({
+      where: { id: parentId },
+    });
+    if (!parentCategory) {
+      throw new NotFoundException(`Parent category with id ${parentId} not found`);
     }
   }
 
-  async update(where: Prisma.CategoryWhereUniqueInput, data: UpdateCategoryDto): Promise<Category> {
-    try {
-      return await this.prisma.category.update({
-          where,
-          data: {
-            ...data
-          }
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException('Category not found');
+  private async validateNoCycle(tx: Prisma.TransactionClient, categoryId: string, newParentId: string): Promise<void> {
+    let currentParentId: string | null = newParentId;
+
+    while (currentParentId !== null) {
+      if (currentParentId === categoryId) {
+        throw new BadRequestException(
+          'Cannot set parent: this would create a cycle',
+        );
       }
 
-      throw error;
+      const parent: { parentId: string | null } | null = await tx.category.findUnique({
+        where: { id: currentParentId },
+        select: { parentId: true }
+      });
+
+      currentParentId = parent?.parentId ?? null;
     }
   }
 
-  async replace(where: Prisma.CategoryWhereUniqueInput, data: ReplaceCategoryDto): Promise<Category> {
+  private async updateInternal(
+    tx: Prisma.TransactionClient,
+    where: Prisma.CategoryWhereUniqueInput,
+    data: Prisma.CategoryUpdateInput,
+  ): Promise<Category> {
     try {
-      return await this.prisma.category.update({
-          where,
-          data: {
-            ...data,
-            icon: data.icon || '', // Set to empty string if not provided
-            parentId: data.parentId || null, // Set to null if not provided
-          }
+      return await tx.category.update({
+        where,
+        data,
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('Category not found');
       }
-
-      throw error;
-    }
-  }
-
-  async delete(where: Prisma.CategoryWhereUniqueInput): Promise<Category> {
-    try {
-      return await this.prisma.category.delete({
-          where
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException('Category not found');
-      }
-
       throw error;
     }
   }
