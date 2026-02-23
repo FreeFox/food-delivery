@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, Product } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateProductDto } from './dto/create-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -31,4 +32,33 @@ export class ProductsService {
         }
         return product;
     }
+
+    async create(data: CreateProductDto): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            // validations?
+
+            try {
+                return await tx.product.create({
+                    data: {
+                        id: data.id,
+                        name: data.name,
+                        description: data.description ?? '',
+                        price: data.price,
+                        image: data.image ?? '',
+                        rating: data.rating ?? 0,
+                        reviews: data.reviews ?? 0
+                    }
+                });
+            } catch (error) {
+                if (
+                    error instanceof Prisma.PrismaClientKnownRequestError &&
+                    error.code === 'P2002'
+                ) {
+                    throw new BadRequestException('Product with this id already exists');
+                }
+                throw error;
+            }
+        });
+    }
+
 }
