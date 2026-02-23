@@ -1,4 +1,4 @@
-import { HttpException, Injectable, NotFoundException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, Product } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -33,54 +33,32 @@ export class ProductsService {
         return product;
     }
 
-    async create(dto: CreateProductDto): Promise<Product> {
+    async create(data: CreateProductDto): Promise<Product> {
         return this.prisma.$transaction(async (tx) => {
+            // validations?
+
             try {
                 return await tx.product.create({
-                    data: dto,
+                    data: {
+                        id: data.id,
+                        name: data.name,
+                        description: data.description ?? '',
+                        price: data.price,
+                        image: data.image ?? '',
+                        rating: data.rating ?? 0,
+                        reviews: data.reviews ?? 0
+                    }
                 });
             } catch (error) {
-                throw new HttpException('Failed to create product', HttpStatus.INTERNAL_SERVER_ERROR);
+                if (
+                    error instanceof Prisma.PrismaClientKnownRequestError &&
+                    error.code === 'P2002'
+                ) {
+                    throw new BadRequestException('Product with this id already exists');
+                }
+                throw error;
             }
         });
     }
 
-    /*
-
-      async create(data: CreateCategoryDto): Promise<Category> {
-        return this.prisma.$transaction(async (tx) => {
-          if (data.parentId) {
-            if (data.parentId === data.id) {
-              throw new BadRequestException('Category cannot be parent of itself');
-            }
-    
-            await this.parentCategoryExists(tx, data.parentId);
-            await this.validateNoCycle(tx, data.id, data.parentId);
-          }
-    
-          try {
-            return await tx.category.create({
-              data: {
-                id: data.id,
-                name: data.name,
-                icon: data.icon ?? '',
-                parent: data.parentId
-                  ? { connect: { id: data.parentId } }
-                  : undefined,
-              }
-            });
-          } catch (error) {
-            if (
-              error instanceof Prisma.PrismaClientKnownRequestError &&
-              error.code === 'P2002'
-            ) {
-              throw new BadRequestException('Category with this id already exists');
-            }
-            throw error;
-          }
-        });
-      }
-
-     */
-    
 }
