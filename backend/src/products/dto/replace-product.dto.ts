@@ -1,10 +1,6 @@
 import { IsNotEmpty, IsString, IsOptional, IsNumber } from "class-validator";
 
-export class CreateProductDto {
-    @IsString()
-    @IsNotEmpty()
-    id: string;
-
+export class UpdateProductDto {
     @IsString()
     @IsNotEmpty()
     name: string;
@@ -21,10 +17,10 @@ export class CreateProductDto {
     image?: string;
 
     @IsNumber()
-    @IsOptional()
-    rating?: number;
+    @IsNotEmpty()
+    rating: number;
 
     @IsNumber()
-    @IsOptional()
-    reviews?: number;
+    @IsNotEmpty()
+    reviews: number;
 }
