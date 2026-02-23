@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { Prisma, Product } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ReplaceProductDto } from './dto/replace-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -59,6 +61,68 @@ export class ProductsService {
                 throw error;
             }
         });
+    }
+
+    async update(id: string, data: UpdateProductDto): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            const updateData: Prisma.ProductUpdateInput = {
+                ...(data.name !== undefined && { name: data.name }),
+                ...(data.description !== undefined && { description: data.description }),
+                ...(data.price !== undefined && { price: data.price }),
+                ...(data.image !== undefined && { image: data.image }),
+                ...(data.rating !== undefined && { rating: data.rating }),
+                ...(data.reviews !== undefined && { reviews: data.reviews }),
+            };
+
+            return this.updateInternal(tx, { id }, updateData);
+        });
+    }
+
+    async replace(id: string, data: ReplaceProductDto): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            return this.updateInternal(tx, { id }, {
+                name: data.name,
+                description: data.description ?? '',
+                price: data.price,
+                image: data.image ?? '',
+                rating: data.rating ?? 0,
+                reviews: data.reviews ?? 0
+            });
+        });
+    }
+
+    async delete(id: string): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            try {
+                return await tx.product.delete({
+                    where: { id }
+                });
+            } catch (error) {
+                if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                    throw new NotFoundException(`Product with id ${id} not found`);
+                }
+
+                throw error;
+            }
+        });
+    }
+
+    async updateInternal(
+        tx: Prisma.TransactionClient,
+        where: Prisma.ProductWhereUniqueInput,
+        data: Prisma.ProductUpdateInput
+    ): Promise<Product> {
+        try {
+            return await tx.product.update({
+                where,
+                data,
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                throw new NotFoundException('Product not found');
+            }
+            throw error;
+        }
     }
 
 }

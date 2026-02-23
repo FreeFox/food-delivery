@@ -1,6 +1,8 @@
 import { Controller, Body, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { ReplaceProductDto } from './dto/replace-product.dto';
 
 const API_VERSION = 'v1';
 
@@ -20,24 +22,23 @@ export class ProductsController {
 
     @Post()
     async create(@Body() dto: CreateProductDto) {
-        // this.products.create({
-        //     ...dto
-        // });
-        return { message: 'Create product endpoint' };
+        return this.products.create({
+            ...dto
+        });
     }
 
     @Patch(':id')
-    async update(@Param('id') id: string) {
-        return { message: `Update product with id ${id} endpoint` };
+    async update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+        return this.products.update(id, dto);
     }
 
     @Put(':id')
-    async replace(@Param('id') id: string) {
-        return { message: `Replace product with id ${id} endpoint` };
+    async replace(@Param('id') id: string, @Body() dto: ReplaceProductDto) {
+        return this.products.replace(id, dto);
     }
 
     @Delete(':id')
     async delete(@Param('id') id: string) {
-        return { message: `Delete product with id ${id} endpoint` };
+        return this.products.delete(id);
     }
 }
