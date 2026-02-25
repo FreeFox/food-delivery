@@ -125,4 +125,50 @@ export class ProductsService {
         }
     }
 
+    async addCategory(id: string, categoryIds: string[]): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            const product = await this.findOne({ id });
+
+            const categories = await tx.category.findMany({
+                where: { id: { in: categoryIds } }
+            });
+
+            if (categories.length !== categoryIds.length) {
+                throw new NotFoundException('One or more categories not found');
+            }
+
+            return await tx.product.update({
+                where: { id },
+                data: {
+                    category: {
+                        connect: categoryIds.map(categoryId => ({ id: categoryId }))
+                    }
+                }
+            });
+        });
+    }
+
+    async removeCategory(id: string, categoryIds: string[]): Promise<Product> {
+        return this.prisma.$transaction(async (tx) => {
+            const product = await this.findOne({ id });
+
+            const categories = await tx.category.findMany({
+                where: { id: { in: categoryIds } }
+            });
+
+            if (categories.length !== categoryIds.length) {
+                throw new NotFoundException('One or more categories not found');
+            }
+
+            return await tx.product.update({
+                where: { id },
+                data: {
+                    category: {
+                        disconnect: categoryIds.map(categoryId => ({ id: categoryId }))
+                    }
+                }
+            });
+        });
+    }
+
 }
