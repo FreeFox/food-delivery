@@ -5,8 +5,8 @@ import { DatabaseService } from '../database/database.service';
 export class RestaurantService {
   constructor(private db: DatabaseService) {}
 
-  async findOne() {
-    const [restaurants] = await this.db.execute('SELECT * FROM restaurants LIMIT 1');
+  async findById(id: string) {
+    const [restaurants] = await this.db.execute('SELECT * FROM restaurants WHERE id = ?', [id]);
     return restaurants.length > 0 ? restaurants[0] : null;
   }
 
