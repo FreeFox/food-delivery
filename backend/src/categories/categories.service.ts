@@ -46,7 +46,6 @@ export class CategoriesService {
           throw new BadRequestException('Category cannot be parent of itself');
         }
 
-        await this.parentCategoryExists(tx, data.parentId);
         await this.validateNoCycle(tx, data.id, data.parentId);
       }
 
@@ -79,7 +78,6 @@ export class CategoriesService {
         if (data.parentId === id) {
           throw new BadRequestException('Category cannot be parent of itself');
         }
-        await this.parentCategoryExists(tx, data.parentId);
         await this.validateNoCycle(tx, id, data.parentId);
       }
 
@@ -103,7 +101,6 @@ export class CategoriesService {
         if (data.parentId === id) {
           throw new BadRequestException('Category cannot be parent of itself');
         }
-        await this.parentCategoryExists(tx, data.parentId);
         await this.validateNoCycle(tx, id, data.parentId);
       }
 
@@ -139,15 +136,6 @@ export class CategoriesService {
         throw error;
       }
     });
-  }
-
-  private async parentCategoryExists(tx: Prisma.TransactionClient, parentId: string) {
-    const parentCategory = await tx.category.findUnique({
-      where: { id: parentId },
-    });
-    if (!parentCategory) {
-      throw new NotFoundException(`Parent category with id ${parentId} not found`);
-    }
   }
 
   private async validateNoCycle(tx: Prisma.TransactionClient, categoryId: string, newParentId: string): Promise<void> {

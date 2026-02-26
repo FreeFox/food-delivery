@@ -3,6 +3,7 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ReplaceProductDto } from './dto/replace-product.dto';
+import { AssignCategoryProductDto } from './dto/assign-category-product.dto';
 
 const API_VERSION = 'v1';
 
@@ -40,5 +41,16 @@ export class ProductsController {
     @Delete(':id')
     async delete(@Param('id') id: string) {
         return this.products.delete(id);
+    }
+
+    @Post(':id/categories/')
+    async addCategory(@Param('id') id: string, @Body() dto: AssignCategoryProductDto) {
+        return this.products.addCategory(id, dto.categories);
+    }
+
+    @Delete(':id/categories/')
+    async removeCategory(@Param('id') id: string, @Body() dto: AssignCategoryProductDto) {
+        return this.products.removeCategory(id, dto.categories);
+
     }
 }
