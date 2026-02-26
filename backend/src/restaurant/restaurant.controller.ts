@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Put } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 
 const API_VERSION = 'v1';
@@ -17,4 +17,23 @@ export class RestaurantController {
     return this.restaurant.findById(id);
   }
 
+  @Post()
+  async createRestaurant() {
+    return this.restaurant.create();
+  }
+
+  @Patch(':id')
+  async updateRestaurant(id: string) {
+    return this.restaurant.update(id);
+  }
+
+  @Put(':id')
+  async replaceRestaurant(id: string) {
+    return this.restaurant.replace(id);
+  }
+
+  @Delete(':id')
+  async deleteRestaurant(id: string) {
+    return this.restaurant.delete(id);
+  }
 }
