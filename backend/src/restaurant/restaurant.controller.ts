@@ -8,7 +8,13 @@ export class RestaurantController {
   constructor(private restaurant: RestaurantService) {}
 
   @Get()
-  async getRestaurant() {
-    return this.restaurant.findOne();
+  async getRestaurants() {
+    return this.restaurant.findAll();
   }
+
+  @Get(':id')
+  async getRestaurantById(id: string) {
+    return this.restaurant.findById(id);
+  }
+
 }
