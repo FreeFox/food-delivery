@@ -15,7 +15,7 @@ export class CategoriesService {
     cursor?: Prisma.CategoryWhereUniqueInput;
     where?: Prisma.CategoryWhereInput;
     orderBy?: Prisma.CategoryOrderByWithRelationInput;
-  }) {
+  }) : Promise<Category[]> {
     return this.prisma.category.findMany({
       skip: params.skip,
       take: params.take,

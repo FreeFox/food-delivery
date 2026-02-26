@@ -1,5 +1,6 @@
-import { Controller, Get, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Put, Delete } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
+import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 
 const API_VERSION = 'v1';
 
@@ -18,8 +19,8 @@ export class RestaurantController {
   }
 
   @Post()
-  async createRestaurant() {
-    return this.restaurant.create();
+  async createRestaurant(@Body() createRestaurantDto: CreateRestaurantDto) {
+    return this.restaurant.create(createRestaurantDto);
   }
 
   @Patch(':id')

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `Product` MODIFY `description` VARCHAR(191) NULL,
+    MODIFY `image` VARCHAR(191) NULL,
+    MODIFY `rating` INTEGER NULL DEFAULT 0,
+    MODIFY `reviews` INTEGER NULL DEFAULT 0;

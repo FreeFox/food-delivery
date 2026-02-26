@@ -15,7 +15,7 @@ export class ProductsService {
         cursor?: Prisma.ProductWhereUniqueInput;
         where?: Prisma.ProductWhereInput;
         orderBy?: Prisma.ProductOrderByWithRelationInput;
-    }) {
+    }) : Promise<Product[]> {
         return await this.prisma.product.findMany({
             skip: params.skip,
             take: params.take,
