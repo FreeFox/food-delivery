@@ -31,7 +31,7 @@ export class RestaurantService {
     });
   }
 
-  async create(data: CreateRestaurantDto) {
+  async create(data: CreateRestaurantDto) : Promise<Restaurant> {
     const restaurantData : Prisma.RestaurantCreateInput = {
       id: data.id,
       name: data.name,
@@ -48,18 +48,44 @@ export class RestaurantService {
     });
   }
 
-  async update(id: string, data: UpdateRestaurantDto) {
-    // await this.db.execute('UPDATE restaurants SET name = ? WHERE id = ?', ['Updated Restaurant', id]);
-    // return { id, name: 'Updated Restaurant' };
+  async update(id: string, data: UpdateRestaurantDto) : Promise<Restaurant> {
+    const updateData: Prisma.RestaurantUpdateInput = {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.address !== undefined && { address: data.address }),
+    };
+
+    if (data.rootCategoryId !== undefined) {
+        updateData.rootCategory = data.rootCategoryId != null
+            ? { connect: { id: data.rootCategoryId } }
+            : {};
+    }
+
+    return this.prisma.restaurant.update({
+        where: { id },
+        data: updateData,
+    });
   }
 
-  async replace(id: string, data: ReplaceRestaurantDto) {
-    // await this.db.execute('UPDATE restaurants SET name = ? WHERE id = ?', ['Replaced Restaurant', id]);
-    // return { id, name: 'Replaced Restaurant' };
+  async replace(id: string, data: ReplaceRestaurantDto) : Promise<Restaurant> {
+    const restaurantData : Prisma.RestaurantUpdateInput = {
+      name: data.name,
+      address: data.address ?? '',
+      rootCategory: {}
+    }
+
+    if (data.rootCategoryId && restaurantData.rootCategory) {
+      restaurantData.rootCategory.connect = { id: data.rootCategoryId }
+    }
+
+    return this.prisma.restaurant.update({
+        where: { id },
+        data: restaurantData
+    });
   }
 
-  async delete(id: string) {
-    // await this.db.execute('DELETE FROM restaurants WHERE id = ?', [id]);
-    // return { id };
+  async delete(id: string) : Promise<Restaurant> {
+    return this.prisma.restaurant.delete({
+        where: { id },
+    });
   }
 }
