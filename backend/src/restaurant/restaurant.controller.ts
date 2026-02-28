@@ -1,5 +1,8 @@
-import { Controller, Get, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Put, Delete } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
+import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
+import { ReplaceRestaurantDto } from './dto/repace-restaurant.dto';
 
 const API_VERSION = 'v1';
 
@@ -9,7 +12,7 @@ export class RestaurantController {
 
   @Get()
   async getRestaurants() {
-    return this.restaurant.findAll();
+    return this.restaurant.findAll({});
   }
 
   @Get(':id')
@@ -18,18 +21,18 @@ export class RestaurantController {
   }
 
   @Post()
-  async createRestaurant() {
-    return this.restaurant.create();
+  async createRestaurant(@Body() createRestaurantDto: CreateRestaurantDto) {
+    return this.restaurant.create(createRestaurantDto);
   }
 
   @Patch(':id')
-  async updateRestaurant(id: string) {
-    return this.restaurant.update(id);
+  async updateRestaurant(id: string, @Body() updateRestaurantDto: UpdateRestaurantDto) {
+    return this.restaurant.update(id, updateRestaurantDto);
   }
 
   @Put(':id')
-  async replaceRestaurant(id: string) {
-    return this.restaurant.replace(id);
+  async replaceRestaurant(id: string, @Body() replaceRestaurantDto: ReplaceRestaurantDto) {
+    return this.restaurant.replace(id, replaceRestaurantDto);
   }
 
   @Delete(':id')
