@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../users/users.service';
+import { ProfilesService } from '../../profiles/profiles.service';
 import { JwtPayload, AuthenticatedUser } from '../../common/types';
 
 /**
@@ -15,7 +15,7 @@ import { JwtPayload, AuthenticatedUser } from '../../common/types';
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly profilesService: ProfilesService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -27,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     try {
       // Re-fetch so deactivated admins are blocked immediately
-      const profile = await this.usersService.findPublicById(payload.sub);
+      const profile = await this.profilesService.findPublicById(payload.sub);
       return profile;
     } catch {
       throw new UnauthorizedException('Token is no longer valid.');

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PassportSerializer } from '@nestjs/passport';
-import { UsersService } from '../../users/users.service';
+import { ProfilesService } from '../../profiles/profiles.service';
 import { AuthenticatedUser } from '../../common/types';
 
 /**
@@ -13,7 +13,7 @@ import { AuthenticatedUser } from '../../common/types';
  */
 @Injectable()
 export class SessionSerializer extends PassportSerializer {
-  constructor(private readonly usersService: UsersService) {
+  constructor(private readonly profilesService: ProfilesService) {
     super();
   }
 
@@ -29,8 +29,8 @@ export class SessionSerializer extends PassportSerializer {
     done: (err: Error | null, user: AuthenticatedUser | null) => void,
   ): Promise<void> {
     try {
-      const profile = await this.usersService.findPublicById(profileId);
-      done(null, user);
+      const profile = await this.profilesService.findPublicById(profileId);
+      done(null, profile);
     } catch {
       // Profile deleted or deactivated — invalidate the session gracefully
       done(null, null);
