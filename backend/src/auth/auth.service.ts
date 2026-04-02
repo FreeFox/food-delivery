@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProfilesService, CreateUserDto } from '../profiles/profiles.service';
+import { UsersService, CreateUserDto } from '../users/users.service';
 import { AuthenticatedUser, JwtPayload, TokenPair } from '../common/types';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +20,7 @@ const BCRYPT_ROUNDS = 10; // lower than password hash — refresh tokens are UUI
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly profilesService: ProfilesService,
+    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -35,10 +35,10 @@ export class AuthService {
     dto: CreateUserDto,
     guestId?: string,
   ): Promise<AuthenticatedUser> {
-    const profile = await this.profilesService.createCustomer(dto);
+    const profile = await this.usersService.createCustomer(dto);
 
     if (guestId) {
-      await this.migrateGuestCart(guestId, profile.id);
+      await this.migrateGuestCart(guestId, user.id);
     }
 
     return profile;
@@ -57,7 +57,7 @@ export class AuthService {
     if (guestId) {
       await this.migrateGuestCart(guestId, user.id);
     }
-    return user;
+    return profile;
   }
 
   // ─── Admin: JWT issuance ──────────────────────────────────────────────────
@@ -92,11 +92,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token is invalid or expired.');
     }
 
-    const profile = await this.profilesService.findPublicById(record.profileId);
+    const profile = await this.usersService.findPublicById(record.profileId);
 
     // Rotate: delete old, create new
     await this.prisma.refreshToken.delete({ where: { id: record.id } });
-    return this.issueAdminTokens(profile);
+    return this.issueAdminTokens(user);
   }
 
   // ─── Admin: logout (revoke refresh token) ────────────────────────────────
@@ -179,7 +179,7 @@ export class AuthService {
   // ─── Guest session ────────────────────────────────────────────────────────
 
   async ensureGuestSession(existingGuestId?: string): Promise<string> {
-    return this.profilesService.ensureGuestSession(existingGuestId);
+    return this.usersService.ensureGuestSession(existingGuestId);
   }
 
   // ─── Password reset ───────────────────────────────────────────────────────
@@ -190,13 +190,13 @@ export class AuthService {
    * prevent the reset token from being used as an access token.
    */
   async createPasswordResetToken(email: string): Promise<string> {
-    const profile = await this.profilesService.findByEmail(email);
+    const profile = await this.usersService.findByEmail(email);
 
     // Silently succeed even if email not found — avoids user enumeration
-    if (!profile) return '';
+    if (!user) return '';
 
     return this.jwtService.sign(
-      { sub: profile.id, purpose: 'password-reset' },
+      { sub: user.id, purpose: 'password-reset' },
       {
         secret: this.configService.getOrThrow('JWT_RESET_SECRET'),
         expiresIn: '1h',
@@ -224,7 +224,7 @@ export class AuthService {
       throw new BadRequestException('Invalid token purpose.');
     }
 
-    await this.profilesService.setPassword(payload.sub, newPassword);
+    await this.usersService.setPassword(payload.sub, newPassword);
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

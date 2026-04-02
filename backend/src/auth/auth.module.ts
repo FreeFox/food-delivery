@@ -13,12 +13,12 @@ import { AdminLocalStrategy } from './strategies/admin-local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SessionSerializer } from './strategies/session.serializer';
 
-import { ProfilesModule } from '../profiles/profiles.module';
+import { UsersModule } from '../users/users.module';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
-    ProfilesModule,
+    UsersModule,
     PrismaModule,
     ConfigModule,
 

@@ -15,7 +15,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { ProfilesService } from '../profiles/profiles.service';
+import { UsersService } from '../users/users.service';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -30,7 +30,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
-} from './dto/auth.dto';
+} from './dto';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storefront Auth  (/auth/*)
@@ -40,7 +40,7 @@ import {
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly profilesService: ProfilesService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -72,7 +72,7 @@ export class AuthController {
 
     // Log the user in by populating req.user and regenerating the session
     await new Promise<void>((resolve, reject) => {
-      req.login(profile, (err) => (err ? reject(err) : resolve()));
+      req.login(user, (err) => (err ? reject(err) : resolve()));
     });
 
     // Clear the now-migrated guestId from the session
@@ -80,7 +80,7 @@ export class AuthController {
 
     return {
       message: 'Account created successfully.',
-      user: this.sanitize(profile),
+      user: this.sanitize(user),
     };
   }
 
@@ -161,7 +161,7 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ChangePasswordDto,
   ) {
-    await this.profilesService.changePassword(
+    await this.usersService.changePassword(
       user.id,
       dto.currentPassword,
       dto.newPassword,
@@ -309,19 +309,8 @@ export class AdminAuthController {
 // ─────────────────────────────────────────────────────────────────────────────
 // Augment AuthController with the private sanitize helper
 // ─────────────────────────────────────────────────────────────────────────────
-declare module './auth.controller' {
-  interface AuthController {
-    sanitize(user: AuthenticatedUser): {
-      id: string;
-      email: string;
-      firstName: string | null | undefined;
-      lastName: string | null | undefined;
-      role: Role;
-    };
-  }
-}
-
-AuthController.prototype.sanitize = function (user: AuthenticatedUser) {
+declare module './auth.controller' {}
+AuthController.prototype['sanitize'] = function (user: AuthenticatedUser) {
   return {
     id: user.id,
     email: user.email,

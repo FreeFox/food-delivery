@@ -8,7 +8,6 @@ import { ProductsModule } from './products/products.module';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
-import { ProfilesModule } from './profiles/profiles.module';
 
 @Module({
   imports: [
@@ -20,7 +19,6 @@ import { ProfilesModule } from './profiles/profiles.module';
     ProductsModule,
     AuthModule,
     PrismaModule,
-    ProfilesModule,
   ],
   controllers: [AppController],
 })

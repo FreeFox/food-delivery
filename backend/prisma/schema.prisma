@@ -14,153 +14,9 @@ datasource db {
 }
 
 model Profile {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String?           // null for OAuth-only accounts
-  firstName    String?
-  lastName     String?
-  role         Role     @default(CUSTOMER)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  cart          Cart?
-  orders        Order[]
-  addresses     Address[]
-  refreshTokens RefreshToken[]
-
-  @@map("profiles")
-}
-
-enum Role {
-  CUSTOMER
-  ADMIN
-}
-
-enum OrderStatus {
-  PENDING     // placed, awaiting confirmation
-  CONFIRMED   // payment accepted
-  SHIPPED     // handed to courier
-  DELIVERED   // received by customer
-  CANCELLED
-}
-
-model GuestSession {
-  id        String   @id @default(uuid())
-  guestId   String   @unique  // UUID stored in the session cookie
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  cart Cart?
-
-  @@map("guest_sessions")
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  profileId String
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@map("refresh_tokens")
-}
-
-model Cart {
-  id             String   @id @default(uuid())
-  profileId      String?  @unique
-  guestSessionId String?  @unique
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  profile      Profile?      @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  guestSession GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
-  items        CartItem[]
-
-  @@map("carts")
-}
-
-/// A single line in a cart. Price is snapshotted at add-to-cart time so
-/// price changes do not silently affect existing carts.
-model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int
-  price     Decimal  @db.Decimal(10, 2) // snapshot of Product.price at add time
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
-
-  @@unique([cartId, productId])
-  @@map("cart_items")
-}
-
-model Order {
-  id         String      @id @default(uuid())
-  profileId  String?
-  guestEmail String?
-  status     OrderStatus @default(PENDING)
-  total      Decimal     @db.Decimal(10, 2)
-  notes      String?     @db.Text
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-
-  // Shipping address snapshotted at order placement — decoupled from Address
-  // model so edits to saved addresses don't alter historical orders
-  shippingFirstName  String
-  shippingLastName   String
-  shippingStreet     String
-  shippingCity       String
-  shippingPostalCode String
-  shippingCountry    String
-  shippingPhone      String?
-
-  profile Profile?    @relation(fields: [profileId], references: [id])
-  items   OrderItem[]
-
-  @@map("orders")
-}
-
-/// A single line in an order. Price and name are snapshotted so historical
-/// orders are unaffected by future product edits or deletions.
-model OrderItem {
-  id          String  @id @default(uuid())
-  orderId     String
-  productId   String
-  productName String           // snapshot of Product.name at order time
-  quantity    Int
-  unitPrice   Decimal @db.Decimal(10, 2) // snapshot of Product.price
-  total       Decimal @db.Decimal(10, 2) // unitPrice * quantity
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
-
-  @@map("order_items")
-}
-
-model Address {
-  id         String   @id @default(uuid())
-  profileId  String
-  label      String?           // e.g. "Home", "Office"
-  firstName  String
-  lastName   String
-  street     String
-  city       String
-  postalCode String
-  country    String
-  phone      String?
-  isDefault  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@map("addresses")
+  id          String @id
+  name        String
+  description String
 }
 
 model Category {
@@ -175,21 +31,14 @@ model Category {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  categoryId  String
+  id          String     @id
   name        String
-  slug        String   @unique
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  stock       Int      @default(0)
-  imageUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  category   Category    @relation(fields: [categoryId], references: [id])
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  description String?
+  price       Int
+  image       String?
+  rating      Int?        @default(0)
+  reviews     Int?        @default(0)
+  category    Category[]
 }
 
 model Restaurant {
