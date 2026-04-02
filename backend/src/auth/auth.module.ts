@@ -1,57 +1,31 @@
-// src/auth/auth.module.ts
-
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-
+import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { AuthController, AdminAuthController } from './auth.controller';
-
-import { LocalStrategy } from './strategies/local.strategy';
-import { AdminLocalStrategy } from './strategies/admin-local.strategy';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { SessionSerializer } from './strategies/session.serializer';
-
-import { UsersModule } from '../users/users.module';
-import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
-    UsersModule,
-    PrismaModule,
-    ConfigModule,
-
-    // PassportModule with 'session' as the default strategy so that
-    // @UseGuards(AuthGuard()) (no arg) defaults to session on the storefront.
-    PassportModule.register({ defaultStrategy: 'session', session: true }),
-
-    // JwtModule is configured lazily from ConfigService so the secret is
-    // read from environment variables at runtime, not at build time.
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const secret = config.get('JWT_SECRET');
+        if (!secret) {
+          console.error('ERROR: JWT_SECRET environment variable is not set');
+          process.exit(1);
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: '7d' },
+        };
+      },
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRES_IN', '15m'),
-        },
-      }),
     }),
   ],
-
-  controllers: [AuthController, AdminAuthController],
-
-  providers: [
-    AuthService,
-    // Passport strategies
-    LocalStrategy,
-    AdminLocalStrategy,
-    JwtStrategy,
-    // Session serializer (used by passport.serializeUser / deserializeUser)
-    SessionSerializer,
-  ],
-
+  controllers: [AuthController],
+  providers: [AuthService],
   exports: [AuthService],
 })
 export class AuthModule {}
