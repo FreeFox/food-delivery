@@ -14,10 +14,28 @@ datasource db {
 }
 
 model Profile {
-  id          String @id
-  name        String
-  description String
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  email         String   @unique
+  passwordHash  String?
+  firstName     String?
+  lastName      String?
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
+// model Profile {
+//  description String
+//  role         Role     @default(CUSTOMER)
+//
+//  cart          Cart?
+//  orders        Order[]
+//  addresses     Address[]
+//  refreshTokens RefreshToken[]
+//
+//  @@map("profiles")
+// }
 
 model Category {
   id          String       @id
