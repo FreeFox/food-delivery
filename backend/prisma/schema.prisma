@@ -24,7 +24,7 @@ model Profile {
   isActive      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-//  role          Role     @default(CUSTOMER)
+  role          Role     @default(CUSTOMER)
 //
 //  cart          Cart?
 //  orders        Order[]
@@ -32,6 +32,11 @@ model Profile {
 //  refreshTokens RefreshToken[]
 //
 //  @@map("profiles")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
 }
 
 model Category {
