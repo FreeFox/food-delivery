@@ -4,7 +4,8 @@ import * as bcrypt from 'bcryptjs';
 import { DatabaseService } from '../database/database.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { ProfilesService, CreateUserDto } from '../profiles/profiles.service';
+import { ProfilesService } from '../profiles/profiles.service';
+import { CreateUserDto } from '../profiles/dto/profile.dto';
 import { AuthenticatedUser, JwtPayload, TokenPair } from '../common/types';
 
 @Injectable()
@@ -24,7 +25,7 @@ export class AuthService {
 
     if (guestId) {
       // await this.migrateGuestCart(guestId, profile.id);
-     }
+    }
  
     return profile;
   }
