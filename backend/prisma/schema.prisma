@@ -15,8 +15,6 @@ datasource db {
 
 model Profile {
   id            String   @id @default(uuid())
-  name          String
-  description   String
   email         String   @unique
   passwordHash  String?
   firstName     String?
