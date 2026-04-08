@@ -19,8 +19,8 @@ import { AuthService } from './auth.service';
 // import { RolesGuard } from '../common/guards/roles.guard';
 // import { CurrentUser } from '../common/decorators/current-user.decorator';
 // import { Roles } from '../common/decorators/roles.decorator';
-// import { AuthenticatedUser } from '../common/types';
-// import { Role } from '@prisma/client';
+import { AuthenticatedUser } from '../common/types';
+import { Role } from '@prisma/client';
 import {
   RegisterDto,
   LoginDto,
@@ -32,7 +32,7 @@ import {
 
 const API_VERSION = 'v1';
 
-@Controller('auth')
+@Controller(`api/${API_VERSION}/auth`)
 export class AuthController {constructor(
     private readonly authService: AuthService,
     // private readonly profilesService: ProfilesService,
@@ -42,10 +42,10 @@ export class AuthController {constructor(
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body() dto: RegisterDto,
-    @Session() session: Record<string, unknown>,
     @Req() req: Request,
+    @Session() session?: Record<string, unknown>,
   ) {
-    const guestId = session.guestId as string | undefined;
+    const guestId = session?.guestId as string | undefined;
 
     const profile = await this.authService.register(
       {
@@ -58,16 +58,15 @@ export class AuthController {constructor(
     );
 
     // Log the user in by populating req.user and regenerating the session
-    await new Promise<void>((resolve, reject) => {
-      req.login(profile, (err) => (err ? reject(err) : resolve()));
-    });
+    // await new Promise<void>((resolve, reject) => {
+    //   req.login(profile, (err) => (err ? reject(err) : resolve()));
+    // });
 
-    // Clear the now-migrated guestId from the session
-    delete session.guestId;
+    delete session?.guestId;
 
     return {
       message: 'Account created successfully.',
-      user: profile //this.sanitize(profile),
+      user: this.sanitize(profile),
     };
   }
 
@@ -77,3 +76,28 @@ export class AuthController {constructor(
     return this.authService.login(dto.email, dto.password);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Augment AuthController with the private sanitize helper
+// ─────────────────────────────────────────────────────────────────────────────
+declare module './auth.controller' {
+  interface AuthController {
+    sanitize(user: AuthenticatedUser): {
+      id: string;
+      email: string;
+      firstName: string | null | undefined;
+      lastName: string | null | undefined;
+      role: Role;
+    };
+  }
+}
+
+AuthController.prototype.sanitize = function (user: AuthenticatedUser) {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+  };
+};
