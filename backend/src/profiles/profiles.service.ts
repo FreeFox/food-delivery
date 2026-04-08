@@ -41,7 +41,7 @@ export class ProfilesService {
      */
     async findPublicById(id: string): Promise<AuthenticatedUser> {
         const profile = await this.findById(id);
-        
+
         return this.toPublic(profile);
     }
 
@@ -62,6 +62,70 @@ export class ProfilesService {
 
         return this.toPublic(profile);
     }
+
+    // ─── Password validation ──────────────────────────────────────────────────
+
+    /**
+     * Validates email + password. Returns the safe public user on success,
+     * null on failure. Used by LocalStrategy.
+     */
+    async validateCredentials(
+        email: string,
+        password: string,
+    ): Promise<AuthenticatedUser | null> {
+        const profile = await this.findByEmail(email);
+        if (!profile || !profile.isActive || !profile.passwordHash) {
+            return null;
+        }
+
+        const isValid = await bcrypt.compare(password, profile.passwordHash);
+        if (!isValid) return null;
+
+        return this.toPublic(profile);
+    }
+
+    // ─── Guest session management ─────────────────────────────────────────────
+
+    /**
+     * Creates or returns an existing GuestSession record, ensuring a
+     * corresponding empty Cart exists as well.
+     */
+    // async ensureGuestSession(guestId?: string): Promise<string> {
+    //     if (guestId) {
+    //         const existing = await this.prisma.guestSession.findUnique({
+    //             where: { guestId },
+    //         });
+
+    //         if (existing && existing.expiresAt > new Date()) {
+    //             return existing.guestId;
+    //         }
+    //     }
+
+    //     // Create a fresh guest session + cart atomically
+    //     const newGuestId = uuidv4();
+    //     const expiresAt = new Date();
+    //     expiresAt.setDate(expiresAt.getDate() + GUEST_SESSION_TTL_DAYS);
+
+    //     await this.prisma.$transaction(async (tx) => {
+    //         const session = await tx.guestSession.create({
+    //             data: { guestId: newGuestId, expiresAt },
+    //         });
+    //         await tx.cart.create({ data: { guestSessionId: session.id } });
+    //     });
+
+    //     return newGuestId;
+    // }
+
+    /**
+     * Prunes expired guest sessions and their associated carts.
+     * Call from a @Cron scheduler in a dedicated task module.
+     */
+    // async pruneExpiredGuestSessions(): Promise<number> {
+    //     const result = await this.prisma.guestSession.deleteMany({
+    //         where: { expiresAt: { lt: new Date() } },
+    //     });
+    //     return result.count;
+    // }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 

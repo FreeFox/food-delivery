@@ -58,9 +58,9 @@ export class AuthController {constructor(
     );
 
     // Log the user in by populating req.user and regenerating the session
-    // await new Promise<void>((resolve, reject) => {
-    //   req.login(profile, (err) => (err ? reject(err) : resolve()));
-    // });
+    await new Promise<void>((resolve, reject) => {
+      req.login(profile, (err) => (err ? reject(err) : resolve()));
+    });
 
     delete session?.guestId;
 
