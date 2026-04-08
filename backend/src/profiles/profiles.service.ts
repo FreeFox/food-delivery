@@ -25,6 +25,10 @@ export class ProfilesService {
                 firstName: dto.firstName,
                 lastName: dto.lastName,
                 role: Role.CUSTOMER,
+                id: "test",
+                isActive: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
             },
         });
 
