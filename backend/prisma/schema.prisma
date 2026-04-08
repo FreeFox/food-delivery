@@ -14,9 +14,27 @@ datasource db {
 }
 
 model Profile {
-  id          String @id
-  name        String
-  description String
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  firstName     String?
+  lastName      String?
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  role          Role     @default(CUSTOMER)
+//
+//  cart          Cart?
+//  orders        Order[]
+//  addresses     Address[]
+//  refreshTokens RefreshToken[]
+//
+//  @@map("profiles")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
 }
 
 model Category {

@@ -1,21 +1,79 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Req,
+  Res,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Session,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+// import { ProfilesService } from '../profiles/profiles.service';
+// import { SessionAuthGuard } from '../common/guards/session-auth.guard';
+// import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+// import { RolesGuard } from '../common/guards/roles.guard';
+// import { CurrentUser } from '../common/decorators/current-user.decorator';
+// import { Roles } from '../common/decorators/roles.decorator';
+// import { AuthenticatedUser } from '../common/types';
+// import { Role } from '@prisma/client';
+import {
+  RegisterDto,
+  LoginDto,
+  // RefreshTokenDto,
+  // ForgotPasswordDto,
+  // ResetPasswordDto,
+  // ChangePasswordDto,
+} from './dto/auth.dto';
 
 const API_VERSION = 'v1';
 
-@Controller(`api/${API_VERSION}/auth`)
-export class AuthController {
-  constructor(private auth: AuthService) {}
+@Controller('auth')
+export class AuthController {constructor(
+    private readonly authService: AuthService,
+    // private readonly profilesService: ProfilesService,
+  ) {}
 
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    return this.auth.register(dto.email, dto.password);
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body() dto: RegisterDto,
+    @Session() session: Record<string, unknown>,
+    @Req() req: Request,
+  ) {
+    const guestId = session.guestId as string | undefined;
+
+    const profile = await this.authService.register(
+      {
+        email: dto.email,
+        password: dto.password,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+      },
+      guestId,
+    );
+
+    // Log the user in by populating req.user and regenerating the session
+    await new Promise<void>((resolve, reject) => {
+      req.login(profile, (err) => (err ? reject(err) : resolve()));
+    });
+
+    // Clear the now-migrated guestId from the session
+    delete session.guestId;
+
+    return {
+      message: 'Account created successfully.',
+      user: profile //this.sanitize(profile),
+    };
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password);
+    return this.authService.login(dto.email, dto.password);
   }
 }
