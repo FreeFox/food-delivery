@@ -19,7 +19,7 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
         const user = await this.profilesService.validateCredentials(email, password);
 
         if (!user) {
-            throw new UnauthorizedException('Invalid email or password.');
+            throw new UnauthorizedException('Invalid email or password. Or inactive user account.');
         }
 
         return user;
