@@ -1,6 +1,8 @@
 FROM node:22-slim
 
-RUN apt-get update -y && apt-get install -y openssl && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y \
+    && apt-get install -y openssl gosu psmisc \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -16,9 +18,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN npx prisma generate
 
+RUN npm install -g nodemon
+
 # Start with the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-RUN npm install -g nodemon
 
 CMD ["npm", "run", "start:debug"]
