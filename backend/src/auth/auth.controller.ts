@@ -15,7 +15,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-// import { ProfilesService } from '../profiles/profiles.service';
+import { ProfilesService } from '../profiles/profiles.service';
 // import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 // import { RolesGuard } from '../common/guards/roles.guard';
 // import { Roles } from '../common/decorators/roles.decorator';
@@ -27,7 +27,7 @@ import {
   // RefreshTokenDto,
   // ForgotPasswordDto,
   // ResetPasswordDto,
-  // ChangePasswordDto,
+  ChangePasswordDto,
 } from './dto/auth.dto';
 
 const API_VERSION = 'v1';
@@ -35,7 +35,7 @@ const API_VERSION = 'v1';
 @Controller(`api/${API_VERSION}/auth`)
 export class AuthController {constructor(
     private readonly authService: AuthService,
-    // private readonly profilesService: ProfilesService,
+    private readonly profilesService: ProfilesService,
   ) {}
 
   @Post('register')
@@ -131,9 +131,66 @@ export class AuthController {constructor(
   @Get('me')
   @UseGuards(SessionAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
-    return { user: this.sanitize(user) };
+    return {
+      user: this.sanitize(user)
+    };
   }
 
+  /**
+   * POST /auth/change-password
+   *
+   * Authenticated customers can update their password by supplying their
+   * current password for verification.
+   */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(SessionAuthGuard)
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    await this.profilesService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+   return { message: 'Password updated successfully.' };
+  }
+
+// +  /**
+// +   * POST /auth/forgot-password
+// +   *
+// +   * Generates a password reset token and (in a real app) dispatches an email.
+// +   * Always returns 200 to prevent email enumeration.
+// +   */
+// +  @Post('forgot-password')
+// +  @HttpCode(HttpStatus.OK)
+// +  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+// +    const token = await this.authService.createPasswordResetToken(dto.email);
+// +
+// +    // TODO: inject a MailService and send the token in a reset link
+// +    // await this.mailService.sendPasswordReset(dto.email, token);
+// +
+// +    // We log it here for development convenience — remove in production
+// +    if (token) console.debug('[DEV] Reset token:', token);
+// +
+// +    return {
+// +      message:
+// +        'If an account with that email exists, a reset link has been sent.',
+// +    };
+//    }
+ 
+// +  /**
+// +   * POST /auth/reset-password
+// +   *
+// +   * Validates the signed reset token and applies the new password.
+// +   */
+// +  @Post('reset-password')
+// +  @HttpCode(HttpStatus.OK)
+// +  async resetPassword(@Body() dto: ResetPasswordDto) {
+// +    await this.authService.resetPassword(dto.token, dto.newPassword);
+// +    return { message: 'Password reset successfully. You may now log in.' };
+// +  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

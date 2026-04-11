@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateUserDto } from './dto/profile.dto';
 import { AuthenticatedUser } from '@/common/types';
 import * as bcrypt from 'bcryptjs';
@@ -11,7 +11,7 @@ const GUEST_SESSION_TTL_DAYS = 30;
 
 @Injectable()
 export class ProfilesService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     /**
      * Find a user by email. Returns null if not found.
@@ -29,7 +29,7 @@ export class ProfilesService {
     async findById(id: string): Promise<Profile> {
         const profile = await this.prisma.profile.findUnique({ where: { id } });
 
-        if (!profile){
+        if (!profile) {
             throw new NotFoundException(`Profile ${id} not found.`);
         }
 
@@ -82,6 +82,34 @@ export class ProfilesService {
         if (!isValid) return null;
 
         return this.toPublic(profile);
+    }
+
+    /**
+     * Update password. Verifies the current password before hashing the new one.
+     */
+    async changePassword(
+        profileId: string,
+        currentPassword: string,
+        newPassword: string,
+    ): Promise<void> {
+        const profile = await this.findById(profileId);
+
+        if (!profile.passwordHash) {
+            throw new BadRequestException(
+                'No password set on this account. Use social login.',
+            );
+        }
+
+        const isValid = await bcrypt.compare(currentPassword, profile.passwordHash);
+        if (!isValid) {
+            throw new BadRequestException('Current password is incorrect.');
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+        await this.prisma.profile.update({
+            where: { id: profileId },
+            data: { passwordHash },
+        });
     }
 
     // ─── Guest session management ─────────────────────────────────────────────
