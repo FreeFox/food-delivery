@@ -3,22 +3,17 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { CanActivate } from '@nestjs/common';
 
-/**
- * Protects routes that require a logged-in Customer.
- * Uses the Passport 'local' session strategy.
- */
 @Injectable()
-export class SessionAuthGuard extends AuthGuard('session') {
-  handleRequest<TUser>(err: Error, user: TUser): TUser {
-    if (err || !user) {
-      throw err ?? new UnauthorizedException('Please log in to continue.');
+export class SessionAuthGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    
+    if (!request.isAuthenticated?.() || !request.user) {
+      throw new UnauthorizedException('Please log in to continue.');
     }
-    return user;
-  }
-
-  getRequest(context: ExecutionContext) {
-    return context.switchToHttp().getRequest();
+    
+    return true;
   }
 }

@@ -122,6 +122,18 @@ export class AuthController {constructor(
 
     return { message: 'Logged out successfully.' };
   }
+
+  /**
+   * GET /auth/me
+   *
+   * Returns the currently authenticated customer profile.
+   */
+  @Get('me')
+  @UseGuards(SessionAuthGuard)
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return { user: this.sanitize(user) };
+  }
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
