@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { DatabaseService } from '../database/database.service';
@@ -49,6 +49,28 @@ export class AuthService {
                 expiresIn: '1h',
             },
         );
+    }
+
+    /**
+     * Validates a password reset token and applies the new password.
+     */
+    async resetPassword(token: string, newPassword: string): Promise<void> {
+        let payload: { sub: string; purpose: string };
+
+        try {
+            payload = this.jwtService.verify(token, {
+                secret: this.configService.getOrThrow('JWT_RESET_SECRET'),
+            });
+        } catch {
+            throw new BadRequestException(
+                'Reset link is invalid or has expired. Please request a new one.',
+            );
+        }
+        if (payload.purpose !== 'password-reset') {
+            throw new BadRequestException('Invalid token purpose.');
+        }
+
+        await this.profilesService.setPassword(payload.sub, newPassword);
     }
 
     // ─── Storefront: post-login hook ──────────────────────────────────────────

@@ -26,7 +26,7 @@ import {
   LoginDto,
   // RefreshTokenDto,
   ForgotPasswordDto,
-  // ResetPasswordDto,
+  ResetPasswordDto,
   ChangePasswordDto,
 } from './dto/auth.dto';
 
@@ -181,17 +181,17 @@ export class AuthController {constructor(
     };
    }
  
-// +  /**
-// +   * POST /auth/reset-password
-// +   *
-// +   * Validates the signed reset token and applies the new password.
-// +   */
-// +  @Post('reset-password')
-// +  @HttpCode(HttpStatus.OK)
-// +  async resetPassword(@Body() dto: ResetPasswordDto) {
-// +    await this.authService.resetPassword(dto.token, dto.newPassword);
-// +    return { message: 'Password reset successfully. You may now log in.' };
-// +  }
+  /**
+   * POST /auth/reset-password
+   *
+   * Validates the signed reset token and applies the new password.
+   */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { message: 'Password reset successfully. You may now log in.' };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
