@@ -44,11 +44,11 @@ export class LoginDto {
 //   refreshToken: string;
 // }
 
-// export class ForgotPasswordDto {
-//   @IsEmail()
-//   @IsNotEmpty()
-//   email: string;
-// }
+export class ForgotPasswordDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
 
 // export class ResetPasswordDto {
 //   @IsString()
