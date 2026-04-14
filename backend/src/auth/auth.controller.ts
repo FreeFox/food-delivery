@@ -25,7 +25,7 @@ import {
   RegisterDto,
   LoginDto,
   // RefreshTokenDto,
-  // ForgotPasswordDto,
+  ForgotPasswordDto,
   // ResetPasswordDto,
   ChangePasswordDto,
 } from './dto/auth.dto';
@@ -157,28 +157,29 @@ export class AuthController {constructor(
    return { message: 'Password updated successfully.' };
   }
 
-// +  /**
-// +   * POST /auth/forgot-password
-// +   *
-// +   * Generates a password reset token and (in a real app) dispatches an email.
-// +   * Always returns 200 to prevent email enumeration.
-// +   */
-// +  @Post('forgot-password')
-// +  @HttpCode(HttpStatus.OK)
-// +  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-// +    const token = await this.authService.createPasswordResetToken(dto.email);
-// +
-// +    // TODO: inject a MailService and send the token in a reset link
-// +    // await this.mailService.sendPasswordReset(dto.email, token);
-// +
-// +    // We log it here for development convenience — remove in production
-// +    if (token) console.debug('[DEV] Reset token:', token);
-// +
-// +    return {
-// +      message:
-// +        'If an account with that email exists, a reset link has been sent.',
-// +    };
-//    }
+  /**
+   * POST /auth/forgot-password
+   *
+   * Generates a password reset token and (in a real app) dispatches an email.
+   * Always returns 200 to prevent email enumeration.
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const token = await this.authService.createPasswordResetToken(dto.email);
+
+    // TODO: inject a MailService and send the token in a reset link
+    // await this.mailService.sendPasswordReset(dto.email, token);
+
+    // We log it here for development convenience — remove in production
+    if (token) {
+      console.debug('[DEV] Reset token:', token);
+    }
+
+    return {
+      message: 'If an account with that email exists, a reset link has been sent.',
+    };
+   }
  
 // +  /**
 // +   * POST /auth/reset-password

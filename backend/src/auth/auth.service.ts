@@ -49,6 +49,27 @@ export class AuthService {
         // return { userId: user.id, email, token };
     }
 
+    // ─── Password reset ───────────────────────────────────────────────────────
+
+    /**
+     * Generates a short-lived signed JWT to be embedded in a reset link.
+     * The token payload carries only the profileId and a 'purpose' claim to
+     * prevent the reset token from being used as an access token.
+     */
+    async createPasswordResetToken(email: string): Promise<string> {
+        const profile = await this.profilesService.findByEmail(email);
+
+        if (!profile) return '';
+
+        return this.jwtService.sign(
+            { sub: profile.id, purpose: 'password-reset' },
+            {
+                secret: this.configService.getOrThrow('JWT_RESET_SECRET'),
+                expiresIn: '1h',
+            },
+        );
+    }
+
     // ─── Storefront: post-login hook ──────────────────────────────────────────
 
     /**
