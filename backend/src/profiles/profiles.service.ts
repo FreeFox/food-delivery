@@ -112,6 +112,18 @@ export class ProfilesService {
         });
     }
 
+    /**
+     * Set a new password directly (used during password reset flow after
+     * the reset token has already been validated by AuthService).
+     */
+    async setPassword(profileId: string, newPassword: string): Promise<void> {
+        const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+        await this.prisma.profile.update({
+            where: { id: profileId },
+            data: { passwordHash },
+        });
+    }
+
     // ─── Guest session management ─────────────────────────────────────────────
 
     /**
