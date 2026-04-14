@@ -30,25 +30,6 @@ export class AuthService {
         return profile;
     }
 
-    async login(email: string, password: string) {
-        // const [users] = await this.db.execute<{ id: string; password: string }>(
-        //   'SELECT id, password FROM users WHERE email = ?',
-        //   [email],
-        // );
-        // if (users.length === 0) {
-        //   throw new UnauthorizedException('Invalid credentials');
-        // }
-
-        // const user = users[0];
-        // const validPassword = await bcrypt.compare(password, user.password);
-        // if (!validPassword) {
-        //   throw new UnauthorizedException('Invalid credentials');
-        // }
-
-        // const token = this.jwt.sign({ userId: user.id, email });
-        // return { userId: user.id, email, token };
-    }
-
     // ─── Password reset ───────────────────────────────────────────────────────
 
     /**
