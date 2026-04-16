@@ -203,6 +203,30 @@ export class AuthController {
 export class AdminAuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * POST /admin/auth/login
+   *
+   * AdminLocalStrategy validates credentials AND asserts role = ADMIN before
+   * this handler runs. On success we issue a JWT access + refresh token pair.
+   * No session is created for admin users.
+   */
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('admin-local'))
+  async login(@CurrentUser() user: AuthenticatedUser) {
+    const tokens = await this.authService.issueAdminTokens(user);
+    return {
+      message: 'Admin login successful.',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+      ...tokens,
+    };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
