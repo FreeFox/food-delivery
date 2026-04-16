@@ -33,7 +33,8 @@ import {
 const API_VERSION = 'v1';
 
 @Controller(`api/${API_VERSION}/auth`)
-export class AuthController {constructor(
+export class AuthController {
+  constructor(
     private readonly authService: AuthService,
     private readonly profilesService: ProfilesService,
   ) {}
@@ -192,6 +193,16 @@ export class AuthController {constructor(
     await this.authService.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password reset successfully. You may now log in.' };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Auth  (/admin/auth/*)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Controller('admin/auth')
+export class AdminAuthController {
+  constructor(private readonly authService: AuthService) {}
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
