@@ -100,4 +100,19 @@ export class AuthService {
         const refreshToken = await this.createRefreshToken(user.id);
         return { accessToken, refreshToken };
     }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+
+    private signAccessToken(user: AuthenticatedUser): string {
+        const payload: JwtPayload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+        };
+
+        return this.jwtService.sign(payload, {
+            secret: this.configService.getOrThrow('JWT_SECRET'),
+            expiresIn: this.configService.get('JWT_EXPIRES_IN', '15m'),
+        });
+    }
 }
