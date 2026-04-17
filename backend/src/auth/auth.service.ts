@@ -88,4 +88,16 @@ export class AuthService {
         }
         return user;
     }
+
+    // ─── Admin: JWT issuance ──────────────────────────────────────────────────
+
+    /**
+     * Issues an access token + refresh token pair for an Admin user.
+     * The refresh token is hashed and persisted in the DB.
+     */
+    async issueAdminTokens(user: AuthenticatedUser): Promise<TokenPair> {
+        const accessToken = this.signAccessToken(user);
+        const refreshToken = await this.createRefreshToken(user.id);
+        return { accessToken, refreshToken };
+    }
 }
