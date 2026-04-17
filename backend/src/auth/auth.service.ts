@@ -7,6 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { ProfilesService } from '../profiles/profiles.service';
 import { CreateUserDto } from '../profiles/dto/profile.dto';
 import { AuthenticatedUser, JwtPayload, TokenPair } from '../common/types';
+import { v4 as uuidv4 } from 'uuid';
+
+const REFRESH_TOKEN_TTL_DAYS = 7;
+const BCRYPT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
