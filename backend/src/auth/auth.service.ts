@@ -115,4 +115,18 @@ export class AuthService {
             expiresIn: this.configService.get('JWT_EXPIRES_IN', '15m'),
         });
     }
+
+    private async createRefreshToken(profileId: string): Promise<string> {
+        const raw = uuidv4();
+        const tokenHash = await bcrypt.hash(raw, BCRYPT_ROUNDS);
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
+
+        await this.prisma.refreshToken.create({
+            data: { profileId, tokenHash, expiresAt },
+        });
+
+        return raw; // Return raw token — only the hash lives in the DB
+    }
 }
