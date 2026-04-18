@@ -131,6 +131,6 @@ export class AuthService {
             data: { profileId, tokenHash, expiresAt },
         });
 
-        return raw; // Return raw token — only the hash lives in the DB
+        return raw;
     }
 }
