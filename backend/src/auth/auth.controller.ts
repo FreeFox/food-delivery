@@ -227,6 +227,19 @@ export class AdminAuthController {
       ...tokens,
     };
   }
+
+  /**
+   * POST /admin/auth/refresh
+   *
+   * Accepts the refresh token in the request body, validates it, rotates it,
+   * and returns a new token pair.
+   */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() dto: RefreshTokenDto) {
+    const tokens = await this.authService.refreshAdminTokens(dto.refreshToken);
+    return tokens;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
