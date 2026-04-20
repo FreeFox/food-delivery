@@ -261,6 +261,27 @@ export class AdminAuthController {
     }
     return { message: 'Admin logged out successfully.' };
   }
+
+  /**
+   * GET /admin/auth/me
+   *
+   * Returns the currently authenticated admin's profile, validated via JWT.
+   */
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
+  }
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
