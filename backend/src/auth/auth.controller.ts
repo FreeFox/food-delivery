@@ -24,7 +24,7 @@ import { Role } from '@prisma/client';
 import {
   RegisterDto,
   LoginDto,
-  // RefreshTokenDto,
+  RefreshTokenDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
