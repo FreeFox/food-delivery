@@ -173,12 +173,28 @@ export class AuthService {
 
         for (const candidate of candidates) {
             const match = await bcrypt.compare(rawToken, candidate.tokenHash);
-            
+
             if (match) {
                 return candidate;
             }
         }
 
         return null;
+    }
+
+    // ─── Admin: logout (revoke refresh token) ────────────────────────────────
+
+    async revokeRefreshToken(rawRefreshToken: string): Promise<void> {
+        const record = await this.findRefreshToken(rawRefreshToken);
+        if (record) {
+            await this.prisma.refreshToken.delete({ where: { id: record.id } });
+        }
+    }
+
+    /**
+     * Revokes ALL refresh tokens for a user (e.g. "logout all devices").
+     */
+    async revokeAllRefreshTokens(profileId: string): Promise<void> {
+        await this.prisma.refreshToken.deleteMany({ where: { profileId } });
     }
 }
