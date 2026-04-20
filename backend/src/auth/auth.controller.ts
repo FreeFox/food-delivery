@@ -16,15 +16,14 @@ import { AuthService } from './auth.service';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ProfilesService } from '../profiles/profiles.service';
-// import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-// import { RolesGuard } from '../common/guards/roles.guard';
-// import { Roles } from '../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { AuthenticatedUser } from '../common/types';
 import { Role } from '@prisma/client';
 import {
   RegisterDto,
-  LoginDto,
-  // RefreshTokenDto,
+  RefreshTokenDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
@@ -33,7 +32,8 @@ import {
 const API_VERSION = 'v1';
 
 @Controller(`api/${API_VERSION}/auth`)
-export class AuthController {constructor(
+export class AuthController {
+  constructor(
     private readonly authService: AuthService,
     private readonly profilesService: ProfilesService,
   ) {}
@@ -191,6 +191,75 @@ export class AuthController {constructor(
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.authService.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password reset successfully. You may now log in.' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Auth  (/admin/auth/*)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Controller('admin/auth')
+export class AdminAuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  /**
+   * POST /admin/auth/login
+   *
+   * AdminLocalStrategy validates credentials AND asserts role = ADMIN before
+   * this handler runs. On success we issue a JWT access + refresh token pair.
+   * No session is created for admin users.
+   */
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('admin-local'))
+  async login(@CurrentUser() user: AuthenticatedUser) {
+    const tokens = await this.authService.issueAdminTokens(user);
+    return {
+      message: 'Admin login successful.',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+      ...tokens,
+    };
+  }
+
+  /**
+   * POST /admin/auth/refresh
+   *
+   * Accepts the refresh token in the request body, validates it, rotates it,
+   * and returns a new token pair.
+   */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() dto: RefreshTokenDto) {
+    const tokens = await this.authService.refreshAdminTokens(dto.refreshToken);
+    return tokens;
+  }
+
+  /**
+   * POST /admin/auth/logout
+   *
+   * Revokes the refresh token so it cannot be used to obtain new access tokens.
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RefreshTokenDto,
+  ) {
+    if (dto.refreshToken) {
+      await this.authService.revokeRefreshToken(dto.refreshToken);
+    } else {
+      // Nuclear option: revoke all sessions for this admin
+      await this.authService.revokeAllRefreshTokens(user.id);
+    }
+    return { message: 'Admin logged out successfully.' };
   }
 }
 

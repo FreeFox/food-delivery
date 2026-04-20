@@ -7,6 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { ProfilesService } from '../profiles/profiles.service';
 import { CreateUserDto } from '../profiles/dto/profile.dto';
 import { AuthenticatedUser, JwtPayload, TokenPair } from '../common/types';
+import { v4 as uuidv4 } from 'uuid';
+
+const REFRESH_TOKEN_TTL_DAYS = 7;
+const BCRYPT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
@@ -87,5 +91,94 @@ export class AuthService {
             // await this.migrateGuestCart(guestId, user.id);
         }
         return user;
+    }
+
+    // ─── Admin: JWT issuance ──────────────────────────────────────────────────
+
+    /**
+     * Issues an access token + refresh token pair for an Admin user.
+     * The refresh token is hashed and persisted in the DB.
+     */
+    async issueAdminTokens(user: AuthenticatedUser): Promise<TokenPair> {
+        const accessToken = this.signAccessToken(user);
+        const refreshToken = await this.createRefreshToken(user.id);
+        return { accessToken, refreshToken };
+    }
+
+    // ─── Admin: token refresh ─────────────────────────────────────────────────
+
+    /**
+     * Validates a refresh token, rotates it (old one deleted), and
+     * issues a fresh token pair — implements refresh token rotation.
+     */
+    async refreshAdminTokens(rawRefreshToken: string): Promise<TokenPair> {
+        // Hash the incoming token and look it up
+        const tokenHash = await bcrypt.hash(rawRefreshToken, BCRYPT_ROUNDS);
+
+        // We must search by comparing hashes — find candidates via profileId
+        // stored in the token itself (avoids a full table scan).
+        // Here we verify by iterating valid tokens; in production you may
+        // prefer a deterministic hash (e.g. SHA-256) for direct lookup.
+        const record = await this.findRefreshToken(rawRefreshToken);
+
+        if (!record || record.expiresAt < new Date()) {
+            throw new UnauthorizedException('Refresh token is invalid or expired.');
+        }
+
+        const profile = await this.profilesService.findPublicById(record.profileId);
+
+        // Rotate: delete old, create new
+        await this.prisma.refreshToken.delete({ where: { id: record.id } });
+        return this.issueAdminTokens(profile);
+    }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+
+    private signAccessToken(user: AuthenticatedUser): string {
+        const payload: JwtPayload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+        };
+
+        return this.jwtService.sign(payload, {
+            secret: this.configService.getOrThrow('JWT_SECRET'),
+            expiresIn: this.configService.get('JWT_EXPIRES_IN', '15m'),
+        });
+    }
+
+    private async createRefreshToken(profileId: string): Promise<string> {
+        const raw = uuidv4();
+        const tokenHash = await bcrypt.hash(raw, BCRYPT_ROUNDS);
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
+
+        await this.prisma.refreshToken.create({
+            data: { profileId, tokenHash, expiresAt },
+        });
+
+        return raw;
+    }
+
+    /**
+     * Finds a RefreshToken record by comparing the raw token against stored
+     * hashes for all non-expired records. In high-traffic scenarios, replace
+     * bcrypt with a deterministic HMAC-SHA256 for O(1) lookup.
+     */
+    private async findRefreshToken(rawToken: string) {
+        const candidates = await this.prisma.refreshToken.findMany({
+            where: { expiresAt: { gte: new Date() } },
+        });
+
+        for (const candidate of candidates) {
+            const match = await bcrypt.compare(rawToken, candidate.tokenHash);
+            
+            if (match) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }
