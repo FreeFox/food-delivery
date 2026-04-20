@@ -16,14 +16,13 @@ import { AuthService } from './auth.service';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ProfilesService } from '../profiles/profiles.service';
-// import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-// import { RolesGuard } from '../common/guards/roles.guard';
-// import { Roles } from '../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { AuthenticatedUser } from '../common/types';
 import { Role } from '@prisma/client';
 import {
   RegisterDto,
-  LoginDto,
   RefreshTokenDto,
   ForgotPasswordDto,
   ResetPasswordDto,
@@ -239,6 +238,28 @@ export class AdminAuthController {
   async refresh(@Body() dto: RefreshTokenDto) {
     const tokens = await this.authService.refreshAdminTokens(dto.refreshToken);
     return tokens;
+  }
+
+  /**
+   * POST /admin/auth/logout
+   *
+   * Revokes the refresh token so it cannot be used to obtain new access tokens.
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RefreshTokenDto,
+  ) {
+    if (dto.refreshToken) {
+      await this.authService.revokeRefreshToken(dto.refreshToken);
+    } else {
+      // Nuclear option: revoke all sessions for this admin
+      await this.authService.revokeAllRefreshTokens(user.id);
+    }
+    return { message: 'Admin logged out successfully.' };
   }
 }
 
