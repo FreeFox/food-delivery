@@ -105,6 +105,33 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
+    // ─── Admin: token refresh ─────────────────────────────────────────────────
+
+    /**
+     * Validates a refresh token, rotates it (old one deleted), and
+     * issues a fresh token pair — implements refresh token rotation.
+     */
+    async refreshAdminTokens(rawRefreshToken: string): Promise<TokenPair> {
+        // Hash the incoming token and look it up
+        const tokenHash = await bcrypt.hash(rawRefreshToken, BCRYPT_ROUNDS);
+
+        // We must search by comparing hashes — find candidates via profileId
+        // stored in the token itself (avoids a full table scan).
+        // Here we verify by iterating valid tokens; in production you may
+        // prefer a deterministic hash (e.g. SHA-256) for direct lookup.
+        const record = await this.findRefreshToken(rawRefreshToken);
+
+        if (!record || record.expiresAt < new Date()) {
+            throw new UnauthorizedException('Refresh token is invalid or expired.');
+        }
+
+        const profile = await this.profilesService.findPublicById(record.profileId);
+
+        // Rotate: delete old, create new
+        await this.prisma.refreshToken.delete({ where: { id: record.id } });
+        return this.issueAdminTokens(profile);
+    }
+
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     private signAccessToken(user: AuthenticatedUser): string {
@@ -132,5 +159,26 @@ export class AuthService {
         });
 
         return raw;
+    }
+
+    /**
+     * Finds a RefreshToken record by comparing the raw token against stored
+     * hashes for all non-expired records. In high-traffic scenarios, replace
+     * bcrypt with a deterministic HMAC-SHA256 for O(1) lookup.
+     */
+    private async findRefreshToken(rawToken: string) {
+        const candidates = await this.prisma.refreshToken.findMany({
+            where: { expiresAt: { gte: new Date() } },
+        });
+
+        for (const candidate of candidates) {
+            const match = await bcrypt.compare(rawToken, candidate.tokenHash);
+            
+            if (match) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }
