@@ -33,12 +33,6 @@ export class AdminLocalStrategy extends PassportStrategy(
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    if (user.role !== Role.ADMIN) {
-      // Return a 403 so the admin panel can distinguish "wrong credentials"
-      // from "not authorized for this area"
-      throw new ForbiddenException('Access to the admin panel is restricted.');
-    }
-
     return user;
   }
 }
