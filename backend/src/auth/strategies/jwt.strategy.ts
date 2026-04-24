@@ -23,4 +23,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
         });
     }
+
+    async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+        try {
+            // Re-fetch so deactivated admins are blocked immediately
+            const profile = await this.profilesService.findPublicById(payload.sub);
+            return profile;
+        } catch {
+            throw new UnauthorizedException('Token is no longer valid.');
+        }
+    }
 }
