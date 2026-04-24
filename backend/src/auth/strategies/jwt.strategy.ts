@@ -13,4 +13,14 @@ import { JwtPayload, AuthenticatedUser } from '../../common/types';
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+    constructor(
+        private readonly configService: ConfigService,
+        private readonly profilesService: ProfilesService,
+    ) {
+        super({
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+        });
+    }
 }
